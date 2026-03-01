@@ -23,10 +23,10 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 NAPCAT_PACKAGE = PROJECT_DIR / "package.json.napcat"
 ORIGINAL_PACKAGE = PROJECT_DIR / "package.json.original"
 
-# webui.json 可能的路径（macOS 容器化 QQ）
+# webui.json 可能的路径（NapCat 实际写入非容器路径，优先读取）
 _WEBUI_CONFIG_CANDIDATES = [
-    Path.home() / "Library/Containers/com.tencent.qq/Data/Library/Application Support/QQ/NapCat/config/webui.json",
     Path.home() / "Library/Application Support/QQ/NapCat/config/webui.json",
+    Path.home() / "Library/Containers/com.tencent.qq/Data/Library/Application Support/QQ/NapCat/config/webui.json",
 ]
 
 
