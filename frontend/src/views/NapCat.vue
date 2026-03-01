@@ -71,10 +71,9 @@ onMounted(fetchStatus)
       <div v-if="status" style="margin-top: 8px; font-size: 0.85em; color: #666;">
         <div>QQ 模式:
           <span :style="{ color: status.napcat_mode ? '#2a9d8f' : '#e63946', fontWeight: 600 }">
-            {{ status.napcat_mode ? 'NapCat 模式' : '普通模式（需切换）' }}
+            {{ status.napcat_mode ? 'NapCat 模式' : '普通模式（启动时自动切换）' }}
           </span>
         </div>
-        <div v-if="status.qq_main_pid">QQ 主进程 PID: {{ status.qq_main_pid }}</div>
         <div>WebUI:
           <span :style="{ color: status.webui_reachable ? '#2a9d8f' : '#e63946' }">
             {{ status.webui_reachable ? '可达' : '不可达' }}
@@ -86,7 +85,6 @@ onMounted(fetchStatus)
           </span>
         </div>
         <div v-if="status.login_error">登录提示: {{ status.login_error }}</div>
-        <div v-if="status.webui_base_url">WebUI API: {{ status.webui_base_url }}</div>
       </div>
     </div>
 
@@ -105,12 +103,15 @@ onMounted(fetchStatus)
       <div v-if="qrcode.message" style="margin-top: 8px;" :style="{ color: qrcode.ok === false ? '#e63946' : '#555' }">
         {{ qrcode.message }}
       </div>
-      <div v-if="qrcode.qrcode_url" style="margin-top: 8px;">
-        <div style="font-size: 0.85em; color: #666; margin-bottom: 6px;">二维码链接（可直接扫码或复制到浏览器打开）：</div>
-        <div style="word-break: break-all; font-size: 0.85em;">{{ qrcode.qrcode_url }}</div>
-      </div>
-      <div v-else-if="qrcode.ok !== false" style="margin-top: 8px;">
-        <pre style="background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 0.85em; overflow: auto;">{{ JSON.stringify(qrcode, null, 2) }}</pre>
+      <div v-if="qrcode.qrcode_url" style="margin-top: 10px;">
+        <img
+          :src="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(qrcode.qrcode_url)"
+          alt="QQ 登录二维码"
+          style="width: 220px; height: 220px; border: 1px solid #ddd; border-radius: 8px; background: #fff;"
+        />
+        <div style="margin-top: 8px; color: #666; font-size: 0.85em;">
+          请使用手机 QQ 扫码登录
+        </div>
       </div>
     </div>
   </div>

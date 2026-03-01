@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { listProviders, createProvider, deleteProvider } from '@/api/client'
+import { listProviders, createProvider, updateProviderModelKey, deleteProvider } from '@/api/client'
 
 const providers = ref<any[]>([])
 const showForm = ref(false)
@@ -13,6 +13,12 @@ const form = ref({
   model: '',
   enabled: true,
 })
+const editingId = ref('')
+const editForm = ref({
+  model: '',
+  api_key: '',
+})
+const savingEdit = ref(false)
 
 async function load() {
   const { data } = await listProviders()
@@ -35,6 +41,33 @@ async function remove(id: string) {
   if (!confirm('确认删除该提供商？')) return
   await deleteProvider(id)
   await load()
+}
+
+function startEdit(provider: any) {
+  editingId.value = provider.id
+  editForm.value = {
+    model: provider.model || '',
+    api_key: '',
+  }
+}
+
+function cancelEdit() {
+  editingId.value = ''
+  editForm.value = { model: '', api_key: '' }
+}
+
+async function saveModelAndKey(id: string) {
+  savingEdit.value = true
+  try {
+    await updateProviderModelKey(id, {
+      model: editForm.value.model,
+      api_key: editForm.value.api_key,
+    })
+    cancelEdit()
+    await load()
+  } finally {
+    savingEdit.value = false
+  }
 }
 
 onMounted(load)
@@ -89,11 +122,28 @@ onMounted(load)
           </span>
           <span class="badge badge-gray" style="margin-left: 4px;">{{ p.type }}</span>
         </div>
-        <button class="btn btn-danger btn-sm" @click="remove(p.id)">删除</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary btn-sm" @click="startEdit(p)">编辑模型/API Key</button>
+          <button class="btn btn-danger btn-sm" @click="remove(p.id)">删除</button>
+        </div>
       </div>
       <div style="margin-top: 8px; font-size: 0.85em; color: #666;">
         模型: {{ p.model || '未设置' }} &nbsp;|&nbsp;
         API Key: {{ p.api_key || '未设置' }}
+      </div>
+      <div v-if="editingId === p.id" style="margin-top: 12px; border-top: 1px dashed #ddd; padding-top: 10px;">
+        <div class="form-group">
+          <label>模型</label>
+          <input v-model="editForm.model" placeholder="如 deepseek-chat" />
+        </div>
+        <div class="form-group">
+          <label>API Key（留空表示不修改）</label>
+          <input v-model="editForm.api_key" type="password" placeholder="输入新 key" />
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-success btn-sm" :disabled="savingEdit" @click="saveModelAndKey(p.id)">保存修改</button>
+          <button class="btn btn-primary btn-sm" :disabled="savingEdit" @click="cancelEdit">取消</button>
+        </div>
       </div>
     </div>
 

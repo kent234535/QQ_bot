@@ -36,6 +36,11 @@ class ProviderCreate(BaseModel):
     enabled: bool = True
 
 
+class ProviderModelKeyUpdate(BaseModel):
+    model: str | None = None
+    api_key: str | None = None
+
+
 @router.get("")
 async def list_providers():
     """列出所有提供商（掩码 API Key）"""
@@ -68,6 +73,27 @@ async def update_provider(provider_id: str, body: ProviderCreate):
         existing = config.get_provider(provider_id)
         if existing:
             data["api_key"] = existing["api_key"]
+    config.add_provider(data)
+    return {"ok": True}
+
+
+@router.patch("/{provider_id}/model-key")
+async def update_provider_model_key(provider_id: str, body: ProviderModelKeyUpdate):
+    """仅更新已存在提供商的模型与 API Key"""
+    existing = config.get_provider(provider_id)
+    if not existing:
+        raise HTTPException(404, "提供商不存在")
+
+    data = dict(existing)
+
+    if body.model is not None:
+        data["model"] = body.model
+
+    if body.api_key is not None:
+        # 掩码或空字符串都视为“不修改”
+        if "****" not in body.api_key and body.api_key.strip() != "":
+            data["api_key"] = body.api_key
+
     config.add_provider(data)
     return {"ok": True}
 

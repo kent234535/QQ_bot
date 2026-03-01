@@ -16,6 +16,8 @@ export const updateSettings = (data: Record<string, unknown>) => api.put('/setti
 export const listProviders = () => api.get('/providers')
 export const createProvider = (data: Record<string, unknown>) => api.post('/providers', data)
 export const updateProvider = (id: string, data: Record<string, unknown>) => api.put(`/providers/${id}`, data)
+export const updateProviderModelKey = (id: string, data: Record<string, unknown>) =>
+  api.patch(`/providers/${id}/model-key`, data)
 export const deleteProvider = (id: string) => api.delete(`/providers/${id}`)
 
 // ── Personas ──

@@ -23,7 +23,7 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 NAPCAT_PACKAGE = PROJECT_DIR / "package.json.napcat"
 ORIGINAL_PACKAGE = PROJECT_DIR / "package.json.original"
 
-# webui.json 可能的路径（NapCat 实际写入非容器路径，优先读取）
+# webui.json 路径（NapCat 实际写入非容器路径，优先读取）
 _WEBUI_CONFIG_CANDIDATES = [
     Path.home() / "Library/Application Support/QQ/NapCat/config/webui.json",
     Path.home() / "Library/Containers/com.tencent.qq/Data/Library/Application Support/QQ/NapCat/config/webui.json",
@@ -45,7 +45,6 @@ def _switch_to_napcat() -> tuple[bool, str]:
     """切换 QQ 到 NapCat 模式：替换 package.json + 重签名"""
     if not NAPCAT_PACKAGE.exists():
         return False, f"NapCat package.json 不存在: {NAPCAT_PACKAGE}"
-
     try:
         shutil.copy2(NAPCAT_PACKAGE, QQ_PACKAGE_JSON)
         errors = _codesign_and_xattr()
@@ -60,7 +59,6 @@ def _switch_to_normal() -> tuple[bool, str]:
     """切换 QQ 回普通模式"""
     if not ORIGINAL_PACKAGE.exists():
         return False, f"原版 package.json 不存在: {ORIGINAL_PACKAGE}"
-
     try:
         shutil.copy2(ORIGINAL_PACKAGE, QQ_PACKAGE_JSON)
         errors = _codesign_and_xattr()
@@ -116,13 +114,12 @@ def _get_webui_base(config: dict | None = None) -> str:
 
 
 async def _check_webui_reachable(base_url: str | None = None) -> bool:
-    """快速检测 NapCat WebUI 是否可达（POST /api/auth/login 空 body）"""
+    """快速检测 NapCat WebUI 是否可达"""
     if base_url is None:
         base_url = _get_webui_base()
     try:
         async with httpx.AsyncClient(timeout=2) as client:
             resp = await client.post(f"{base_url}/api/auth/login", json={})
-            # NapCat WebUI 总会返回 200 + {"code": ..., "message": ...}
             if resp.status_code == 200:
                 data = resp.json()
                 return isinstance(data, dict) and "code" in data
@@ -227,7 +224,6 @@ async def _ensure_qq_killed() -> bool:
         await asyncio.sleep(2)
         if not _is_qq_running():
             return True
-    # 还有残留就强杀
     _force_kill_all_qq()
     await asyncio.sleep(1)
     return not _is_qq_running()
@@ -239,7 +235,6 @@ async def _ensure_qq_killed() -> bool:
 async def napcat_status():
     """获取 NapCat 状态"""
     napcat_mode = _is_napcat_mode()
-    qq_pid = _find_napcat_main_pid()
     qq_running = _is_qq_running()
 
     config = _load_webui_config()
@@ -247,13 +242,10 @@ async def napcat_status():
     webui_reachable = await _check_webui_reachable(base_url)
 
     token = str(config.get("token", "") or "")
-
-    # 默认状态
     qq_login = None
     qq_offline = None
     login_error = ""
 
-    # 如果 WebUI 可达，尝试获取登录状态
     if webui_reachable and token:
         async with httpx.AsyncClient(timeout=5) as client:
             credential, _ = await _get_credential(client, base_url, token)
@@ -271,9 +263,7 @@ async def napcat_status():
     return {
         "napcat_mode": napcat_mode,
         "qq_running": qq_running,
-        "qq_main_pid": qq_pid,
         "webui_reachable": webui_reachable,
-        "webui_base_url": base_url if webui_reachable else None,
         "qq_login": qq_login,
         "qq_offline": qq_offline,
         "login_error": login_error,
@@ -331,12 +321,10 @@ async def stop_napcat():
     if not _is_qq_running() and not await _check_webui_reachable():
         return {"ok": True, "message": "NapCat 未在运行"}
 
-    # 彻底杀掉所有 QQ 进程
     killed = await _ensure_qq_killed()
     if not killed:
         return {"ok": False, "message": "无法完全关闭 QQ 进程"}
 
-    # 切换回普通模式
     ok, msg = _switch_to_normal()
     return {"ok": ok, "message": f"NapCat 已停止。{msg}"}
 
@@ -368,7 +356,6 @@ async def proxy_qrcode():
                     "is_login": True,
                     "message": "QQ 已登录，无需二维码",
                 }
-            # 优先复用 status 里的 qrcodeurl
             qrcode_url = str(d.get("qrcodeurl") or "")
             if qrcode_url:
                 return {"ok": True, "qrcode_url": qrcode_url}
