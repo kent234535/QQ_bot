@@ -26,6 +26,6 @@ export const deletePersona = (id: string) => api.delete(`/personas/${id}`)
 
 // ── NapCat ──
 export const getNapCatStatus = () => api.get('/napcat/status')
-export const startNapCat = () => api.post('/napcat/start')
-export const stopNapCat = () => api.post('/napcat/stop')
+export const startNapCat = () => api.post('/napcat/start', null, { timeout: 60000 })
+export const stopNapCat = () => api.post('/napcat/stop', null, { timeout: 30000 })
 export const getNapCatQRCode = () => api.get('/napcat/qrcode')

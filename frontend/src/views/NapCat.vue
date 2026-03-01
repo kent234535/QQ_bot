@@ -61,8 +61,8 @@ onMounted(fetchStatus)
       <div class="flex-between">
         <div>
           <strong>NapCat 状态</strong>
-          <span v-if="status" class="badge" :class="status.process_running ? 'badge-green' : 'badge-red'" style="margin-left: 8px;">
-            {{ status.process_running ? '运行中' : '已停止' }}
+          <span v-if="status" class="badge" :class="status.webui_reachable ? 'badge-green' : status.qq_running ? 'badge-gray' : 'badge-red'" style="margin-left: 8px;">
+            {{ status.webui_reachable ? '运行中' : status.qq_running ? 'QQ 已启动，WebUI 未就绪' : '已停止' }}
           </span>
         </div>
         <button class="btn btn-primary btn-sm" @click="fetchStatus">刷新</button>
@@ -74,7 +74,7 @@ onMounted(fetchStatus)
             {{ status.napcat_mode ? 'NapCat 模式' : '普通模式（需切换）' }}
           </span>
         </div>
-        <div v-if="status.pids?.length">PID: {{ status.pids.join(', ') }}</div>
+        <div v-if="status.qq_main_pid">QQ 主进程 PID: {{ status.qq_main_pid }}</div>
         <div>WebUI:
           <span :style="{ color: status.webui_reachable ? '#2a9d8f' : '#e63946' }">
             {{ status.webui_reachable ? '可达' : '不可达' }}

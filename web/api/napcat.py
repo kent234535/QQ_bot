@@ -42,7 +42,6 @@ def _switch_to_napcat() -> tuple[bool, str]:
 
     try:
         shutil.copy2(NAPCAT_PACKAGE, QQ_PACKAGE_JSON)
-        # macOS 重签名，忽略失败
         subprocess.run(
             ["codesign", "--force", "--deep", "--sign", "-", "/Applications/QQ.app"],
             capture_output=True, timeout=30,
@@ -76,21 +75,51 @@ def _switch_to_normal() -> tuple[bool, str]:
         return False, f"切换失败: {e}"
 
 
-def _kill_all_qq() -> None:
-    """杀掉所有 QQ 进程"""
-    subprocess.run(["killall", "QQ"], capture_output=True, timeout=5)
-
-
-def _find_napcat_pids() -> list[int]:
-    """查找系统中所有 --no-sandbox 模式的 QQ 主进程 PID"""
+def _find_all_qq_pids() -> list[int]:
+    """查找所有 QQ 相关进程（主进程 + Helper + Renderer + QQEXDOC）"""
     try:
         result = subprocess.run(
-            ["pgrep", "-f", "QQ.app.*--no-sandbox"],
+            ["pgrep", "-f", "QQ.app"],
             capture_output=True, text=True, timeout=3,
         )
         return [int(p) for p in result.stdout.strip().split("\n") if p.strip()]
     except Exception:
         return []
+
+
+def _kill_all_qq() -> bool:
+    """彻底杀掉所有 QQ 相关进程（主进程 + 子进程 + QQEXDOC）"""
+    # 先 SIGTERM 优雅退出
+    subprocess.run(["pkill", "-f", "QQ.app"], capture_output=True, timeout=5)
+    subprocess.run(["pkill", "-f", "QQEXDOC"], capture_output=True, timeout=5)
+    return True
+
+
+def _force_kill_all_qq() -> None:
+    """强制杀掉所有 QQ 残留进程"""
+    subprocess.run(["pkill", "-9", "-f", "QQ.app"], capture_output=True, timeout=5)
+    subprocess.run(["pkill", "-9", "-f", "QQEXDOC"], capture_output=True, timeout=5)
+
+
+def _is_qq_running() -> bool:
+    """检查是否有任何 QQ 进程在运行"""
+    return len(_find_all_qq_pids()) > 0
+
+
+def _find_napcat_main_pid() -> int | None:
+    """
+    查找 NapCat 模式的 QQ 主进程 PID。
+    只匹配 /Applications/QQ.app/Contents/MacOS/QQ 主进程（不含 Helper/Renderer 子进程）。
+    """
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "QQ.app/Contents/MacOS/QQ$"],
+            capture_output=True, text=True, timeout=3,
+        )
+        pids = [int(p) for p in result.stdout.strip().split("\n") if p.strip()]
+        return pids[0] if pids else None
+    except Exception:
+        return None
 
 
 async def _probe_webui() -> bool:
@@ -103,32 +132,48 @@ async def _probe_webui() -> bool:
         return False
 
 
+async def _ensure_qq_killed() -> None:
+    """确保所有 QQ 进程已退出，最多等 8 秒"""
+    _kill_all_qq()
+    for _ in range(4):
+        await asyncio.sleep(2)
+        if not _is_qq_running():
+            return
+    # 还有残留就强杀
+    _force_kill_all_qq()
+    await asyncio.sleep(1)
+
+
 # ─── API 路由 ───
 
 @router.get("/status")
 async def napcat_status():
     """获取 NapCat 状态"""
-    pids = _find_napcat_pids()
+    napcat_mode = _is_napcat_mode()
+    qq_pid = _find_napcat_main_pid()
+    qq_running = _is_qq_running()
     webui_reachable = await _probe_webui()
 
     return {
-        "napcat_mode": _is_napcat_mode(),
-        "process_running": len(pids) > 0,
+        "napcat_mode": napcat_mode,
+        "qq_running": qq_running,
+        "qq_main_pid": qq_pid,
         "webui_reachable": webui_reachable,
-        "pids": pids,
     }
 
 
 @router.post("/start")
 async def start_napcat():
-    """一键启动 NapCat：关旧 QQ → 切换模式 → 启动"""
-    # 已经在跑且 WebUI 可达 → 不重复操作
-    if _find_napcat_pids() and await _probe_webui():
+    """一键启动 NapCat：杀全部 QQ → 切换模式 → 启动"""
+    # 已经 WebUI 可达 → 不重复操作
+    if await _probe_webui():
         return {"ok": True, "message": "NapCat 已在运行且 WebUI 可达"}
 
-    # Step 1: 关掉所有 QQ（普通模式或残留进程）
-    _kill_all_qq()
-    await asyncio.sleep(2)
+    # Step 1: 彻底杀掉所有 QQ 进程（含 Helper/Renderer/QQEXDOC）
+    if _is_qq_running():
+        await _ensure_qq_killed()
+        if _is_qq_running():
+            return {"ok": False, "message": "无法关闭现有 QQ 进程，请手动退出 QQ 后重试"}
 
     # Step 2: 切换到 NapCat 模式
     if not _is_napcat_mode():
@@ -148,44 +193,26 @@ async def start_napcat():
     except Exception as e:
         return {"ok": False, "message": str(e)}
 
-    # Step 4: 等待 WebUI 就绪
+    # Step 4: 等待 WebUI 就绪（最多 40 秒）
     for i in range(20):
         await asyncio.sleep(2)
         if await _probe_webui():
             return {"ok": True, "message": "NapCat 启动成功，WebUI 已就绪"}
-        # 进程存在就继续等
-        if _find_napcat_pids():
-            continue
-        # 进程都没了，可能还在 fork
-        if i < 5:
-            continue
-        break
 
-    pids = _find_napcat_pids()
-    if pids:
-        return {"ok": True, "message": "NapCat 进程已启动，WebUI 尚未就绪（可能需要手动确认登录）", "pids": pids}
+    if _is_qq_running():
+        return {"ok": True, "message": "QQ 已启动，WebUI 尚未就绪（请在 QQ 窗口确认登录）"}
 
-    return {"ok": False, "message": "启动超时，请检查 QQ 是否弹出登录窗口"}
+    return {"ok": False, "message": "启动超时，QQ 进程未检测到"}
 
 
 @router.post("/stop")
 async def stop_napcat():
     """停止 NapCat 并切换回普通模式"""
-    pids = _find_napcat_pids()
-    if not pids and not await _probe_webui():
+    if not _is_qq_running() and not await _probe_webui():
         return {"ok": True, "message": "NapCat 未在运行"}
 
-    # 杀掉所有 QQ 进程
-    _kill_all_qq()
-    await asyncio.sleep(2)
-
-    # 强制清理残留
-    remaining = _find_napcat_pids()
-    for pid in remaining:
-        try:
-            subprocess.run(["kill", "-9", str(pid)], timeout=3)
-        except Exception:
-            pass
+    # 彻底杀掉所有 QQ 进程
+    await _ensure_qq_killed()
 
     # 切换回普通模式
     ok, msg = _switch_to_normal()
