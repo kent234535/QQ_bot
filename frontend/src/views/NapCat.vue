@@ -61,8 +61,8 @@ onMounted(fetchStatus)
       <div class="flex-between">
         <div>
           <strong>NapCat 状态</strong>
-          <span v-if="status" class="badge" :class="status.webui_reachable ? 'badge-green' : status.qq_running ? 'badge-gray' : 'badge-red'" style="margin-left: 8px;">
-            {{ status.webui_reachable ? '运行中' : status.qq_running ? 'QQ 已启动，WebUI 未就绪' : '已停止' }}
+          <span v-if="status" class="badge" :class="status.qq_login ? 'badge-green' : status.webui_reachable ? 'badge-green' : status.qq_running ? 'badge-gray' : 'badge-red'" style="margin-left: 8px;">
+            {{ status.qq_login ? 'QQ 已登录' : status.webui_reachable ? '运行中' : status.qq_running ? 'QQ 已启动，WebUI 未就绪' : '已停止' }}
           </span>
         </div>
         <button class="btn btn-primary btn-sm" @click="fetchStatus">刷新</button>
@@ -80,6 +80,13 @@ onMounted(fetchStatus)
             {{ status.webui_reachable ? '可达' : '不可达' }}
           </span>
         </div>
+        <div>QQ 登录:
+          <span :style="{ color: status.qq_login ? '#2a9d8f' : status.qq_offline ? '#f4a261' : '#e63946', fontWeight: 600 }">
+            {{ status.qq_login ? '已登录' : status.qq_offline ? '离线' : '未登录' }}
+          </span>
+        </div>
+        <div v-if="status.login_error">登录提示: {{ status.login_error }}</div>
+        <div v-if="status.webui_base_url">WebUI API: {{ status.webui_base_url }}</div>
       </div>
     </div>
 
@@ -95,10 +102,14 @@ onMounted(fetchStatus)
 
     <div v-if="qrcode" class="card">
       <strong>登录二维码</strong>
-      <div v-if="qrcode.ok === false" style="margin-top: 8px; color: #e63946;">
+      <div v-if="qrcode.message" style="margin-top: 8px;" :style="{ color: qrcode.ok === false ? '#e63946' : '#555' }">
         {{ qrcode.message }}
       </div>
-      <div v-else style="margin-top: 8px;">
+      <div v-if="qrcode.qrcode_url" style="margin-top: 8px;">
+        <div style="font-size: 0.85em; color: #666; margin-bottom: 6px;">二维码链接（可直接扫码或复制到浏览器打开）：</div>
+        <div style="word-break: break-all; font-size: 0.85em;">{{ qrcode.qrcode_url }}</div>
+      </div>
+      <div v-else-if="qrcode.ok !== false" style="margin-top: 8px;">
         <pre style="background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 0.85em; overflow: auto;">{{ JSON.stringify(qrcode, null, 2) }}</pre>
       </div>
     </div>
