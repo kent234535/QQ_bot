@@ -42,14 +42,9 @@ def _switch_to_napcat() -> tuple[bool, str]:
 
     try:
         shutil.copy2(NAPCAT_PACKAGE, QQ_PACKAGE_JSON)
-        subprocess.run(
-            ["codesign", "--force", "--deep", "--sign", "-", "/Applications/QQ.app"],
-            capture_output=True, timeout=30,
-        )
-        subprocess.run(
-            ["xattr", "-cr", "/Applications/QQ.app"],
-            capture_output=True, timeout=10,
-        )
+        errors = _codesign_and_xattr()
+        if errors:
+            return False, f"package.json 已替换，但签名失败: {errors}"
         return True, "已切换到 NapCat 模式"
     except Exception as e:
         return False, f"切换失败: {e}"
@@ -62,17 +57,30 @@ def _switch_to_normal() -> tuple[bool, str]:
 
     try:
         shutil.copy2(ORIGINAL_PACKAGE, QQ_PACKAGE_JSON)
-        subprocess.run(
-            ["codesign", "--force", "--deep", "--sign", "-", "/Applications/QQ.app"],
-            capture_output=True, timeout=30,
-        )
-        subprocess.run(
-            ["xattr", "-cr", "/Applications/QQ.app"],
-            capture_output=True, timeout=10,
-        )
+        errors = _codesign_and_xattr()
+        if errors:
+            return False, f"package.json 已恢复，但签名失败: {errors}"
         return True, "已切换回普通模式"
     except Exception as e:
         return False, f"切换失败: {e}"
+
+
+def _codesign_and_xattr() -> str:
+    """执行 codesign + xattr，返回错误信息（空字符串表示成功）"""
+    errors = []
+    r1 = subprocess.run(
+        ["codesign", "--force", "--deep", "--sign", "-", "/Applications/QQ.app"],
+        capture_output=True, text=True, timeout=30,
+    )
+    if r1.returncode != 0:
+        errors.append(f"codesign 退出码 {r1.returncode}: {r1.stderr.strip()}")
+    r2 = subprocess.run(
+        ["xattr", "-cr", "/Applications/QQ.app"],
+        capture_output=True, text=True, timeout=10,
+    )
+    if r2.returncode != 0:
+        errors.append(f"xattr 退出码 {r2.returncode}: {r2.stderr.strip()}")
+    return "; ".join(errors)
 
 
 def _find_all_qq_pids() -> list[int]:
@@ -217,7 +225,7 @@ async def stop_napcat():
     # 切换回普通模式
     ok, msg = _switch_to_normal()
 
-    return {"ok": True, "message": f"NapCat 已停止。{msg}"}
+    return {"ok": ok, "message": f"NapCat 已停止。{msg}"}
 
 
 @router.get("/qrcode")

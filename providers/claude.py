@@ -27,9 +27,9 @@ class ClaudeProvider(AIProvider):
             else:
                 chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-        # 确保消息以 user 开头（Claude 要求）
-        if chat_messages and chat_messages[0]["role"] != "user":
-            chat_messages = [m for m in chat_messages if m["role"] != "assistant" or chat_messages.index(m) > 0]
+        # 确保消息以 user 开头（Claude 要求）— 丢弃开头的 assistant 消息
+        while chat_messages and chat_messages[0]["role"] != "user":
+            chat_messages.pop(0)
 
         base = self.base_url.rstrip("/") if self.base_url else "https://api.anthropic.com"
         url = f"{base}/v1/messages"

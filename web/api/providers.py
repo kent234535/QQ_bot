@@ -10,6 +10,22 @@ from config import config
 router = APIRouter()
 
 
+def _mask_key(key: str) -> str:
+    """掩码 API Key — 任何非空 key 都只显示前 4 + 后 4 位"""
+    if not key:
+        return ""
+    if len(key) <= 8:
+        return "****"
+    return key[:4] + "****" + key[-4:]
+
+
+def _safe_provider(p: dict) -> dict:
+    """返回掩码后的 provider 字典"""
+    safe = dict(p)
+    safe["api_key"] = _mask_key(safe.get("api_key", ""))
+    return safe
+
+
 class ProviderCreate(BaseModel):
     id: str
     name: str
@@ -22,15 +38,8 @@ class ProviderCreate(BaseModel):
 
 @router.get("")
 async def list_providers():
-    """列出所有提供商（隐藏完整 API Key）"""
-    result = []
-    for p in config.providers:
-        safe = dict(p)
-        key = safe.get("api_key", "")
-        if key and len(key) > 8:
-            safe["api_key"] = key[:4] + "****" + key[-4:]
-        result.append(safe)
-    return result
+    """列出所有提供商（掩码 API Key）"""
+    return [_safe_provider(p) for p in config.providers]
 
 
 @router.post("")
@@ -42,11 +51,11 @@ async def create_provider(body: ProviderCreate):
 
 @router.get("/{provider_id}")
 async def get_provider(provider_id: str):
-    """获取单个提供商"""
+    """获取单个提供商（掩码 API Key）"""
     p = config.get_provider(provider_id)
     if not p:
         raise HTTPException(404, "提供商不存在")
-    return p
+    return _safe_provider(p)
 
 
 @router.put("/{provider_id}")
