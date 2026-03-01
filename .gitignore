@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Environment
+.env.local
+
+# Runtime data
+data/
+
+# Frontend build
+web/frontend/dist/
+frontend/node_modules/
+frontend/dist/
+
+# NapCat
+napcat/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Logs
+logs/
+
+# Switch scripts (kept locally)
+switch-qq-*.sh
+package.json.napcat
+package.json.original
