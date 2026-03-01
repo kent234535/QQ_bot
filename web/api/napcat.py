@@ -11,122 +11,104 @@ import httpx
 
 router = APIRouter()
 
-# 通过本 API 启动的 NapCat 进程引用
-_napcat_proc: subprocess.Popen | None = None
-
 NAPCAT_WEBUI_URL = "http://127.0.0.1:6099"
 QQ_APP_PATH = "/Applications/QQ.app/Contents/MacOS/QQ"
 QQ_ACCOUNT = "3540159556"
 
 
-def _is_proc_alive() -> tuple[bool, int | None]:
-    """检查内部管理的进程是否存活"""
-    global _napcat_proc
-    if _napcat_proc is not None and _napcat_proc.poll() is None:
-        return True, _napcat_proc.pid
-    _napcat_proc = None
-    return False, None
-
-
-def _find_external_qq_pid() -> int | None:
-    """检测系统中是否有 --no-sandbox 模式的 QQ 进程（非本 API 启动的）"""
+def _find_napcat_pids() -> list[int]:
+    """查找系统中所有 --no-sandbox 模式的 QQ 主进程 PID"""
     try:
         result = subprocess.run(
             ["pgrep", "-f", "QQ.app.*--no-sandbox"],
             capture_output=True, text=True, timeout=3,
         )
-        pids = result.stdout.strip().split("\n")
-        if pids and pids[0]:
-            return int(pids[0])
+        return [int(p) for p in result.stdout.strip().split("\n") if p.strip()]
     except Exception:
-        pass
-    return None
+        return []
+
+
+async def _probe_webui() -> bool:
+    """探测 NapCat WebUI 是否可达"""
+    try:
+        async with httpx.AsyncClient(timeout=3) as client:
+            resp = await client.get(f"{NAPCAT_WEBUI_URL}/api/get/robot/status")
+            return resp.status_code == 200
+    except Exception:
+        return False
 
 
 @router.get("/status")
 async def napcat_status():
-    """获取 NapCat 状态"""
-    # 先检查内部进程，再检查系统进程
-    managed, pid = _is_proc_alive()
-    if not managed:
-        pid = _find_external_qq_pid()
-
-    process_running = pid is not None
-
-    # 始终探测 WebUI，不论进程由谁启动
-    webui_reachable = False
-    try:
-        async with httpx.AsyncClient(timeout=3) as client:
-            resp = await client.get(f"{NAPCAT_WEBUI_URL}/api/get/robot/status")
-            webui_reachable = resp.status_code == 200
-    except Exception:
-        pass
+    """获取 NapCat 状态 — 以系统进程 + WebUI 探测为准"""
+    pids = _find_napcat_pids()
+    webui_reachable = await _probe_webui()
 
     return {
-        "process_running": process_running,
+        "process_running": len(pids) > 0,
         "webui_reachable": webui_reachable,
-        "pid": pid,
-        "managed": managed,
+        "pids": pids,
     }
 
 
 @router.post("/start")
 async def start_napcat():
     """启动 NapCat（QQ --no-sandbox 模式）"""
-    global _napcat_proc
+    # 已有进程或 WebUI 可达 → 不重复启动
+    pids = _find_napcat_pids()
+    if pids:
+        return {"ok": True, "message": f"NapCat 已在运行（PID: {pids}）"}
 
-    # 检查是否已有进程在跑
-    managed, pid = _is_proc_alive()
-    if managed:
-        return {"ok": True, "message": "NapCat 已在运行", "pid": pid}
-
-    ext_pid = _find_external_qq_pid()
-    if ext_pid:
-        return {"ok": True, "message": f"检测到外部 NapCat 进程（PID: {ext_pid}）", "pid": ext_pid}
+    if await _probe_webui():
+        return {"ok": True, "message": "NapCat WebUI 已可达"}
 
     try:
-        _napcat_proc = subprocess.Popen(
+        # macOS Electron 应用：launcher 进程会 fork 后退出，不能用 Popen 跟踪
+        subprocess.Popen(
             [QQ_APP_PATH, "--no-sandbox", "-q", QQ_ACCOUNT],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        await asyncio.sleep(2)
-
-        if _napcat_proc.poll() is not None:
-            return {"ok": False, "message": "NapCat 启动失败（进程已退出）"}
-
-        return {"ok": True, "pid": _napcat_proc.pid}
     except FileNotFoundError:
         return {"ok": False, "message": f"QQ 未找到: {QQ_APP_PATH}"}
     except Exception as e:
         return {"ok": False, "message": str(e)}
 
+    # 等待 QQ 进程树建立（launcher fork 后退出，真正的 QQ 需要几秒）
+    for _ in range(10):
+        await asyncio.sleep(1)
+        pids = _find_napcat_pids()
+        if pids:
+            return {"ok": True, "message": "NapCat 已启动，等待登录确认...", "pids": pids}
+
+    return {"ok": True, "message": "启动命令已发送，请在 QQ 窗口确认登录"}
+
 
 @router.post("/stop")
 async def stop_napcat():
-    """停止 NapCat"""
-    global _napcat_proc
+    """停止所有 NapCat QQ 进程"""
+    pids = _find_napcat_pids()
+    if not pids:
+        return {"ok": True, "message": "NapCat 未在运行"}
 
-    managed, pid = _is_proc_alive()
-    if managed:
-        _napcat_proc.terminate()
+    for pid in pids:
         try:
-            _napcat_proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            _napcat_proc.kill()
-        _napcat_proc = None
-        return {"ok": True, "message": "NapCat 已停止"}
+            subprocess.run(["kill", str(pid)], timeout=5)
+        except Exception:
+            pass
 
-    # 尝试停止外部进程
-    ext_pid = _find_external_qq_pid()
-    if ext_pid:
-        try:
-            subprocess.run(["kill", str(ext_pid)], timeout=5)
-            return {"ok": True, "message": f"已终止外部 NapCat 进程（PID: {ext_pid}）"}
-        except Exception as e:
-            return {"ok": False, "message": f"终止失败: {e}"}
+    # 等待进程退出
+    await asyncio.sleep(2)
+    remaining = _find_napcat_pids()
+    if remaining:
+        # 强制 kill
+        for pid in remaining:
+            try:
+                subprocess.run(["kill", "-9", str(pid)], timeout=3)
+            except Exception:
+                pass
 
-    return {"ok": True, "message": "NapCat 未在运行"}
+    return {"ok": True, "message": f"已终止 NapCat 进程（PID: {pids}）"}
 
 
 @router.get("/qrcode")
