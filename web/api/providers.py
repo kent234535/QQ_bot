@@ -90,7 +90,7 @@ async def create_provider(body: ProviderCreate):
 @router.post("/list-models")
 async def list_available_models(body: ListModelsRequest):
     if not body.base_url or not body.api_key:
-        raise HTTPException(400, "please fill Base URL and API Key")
+        raise HTTPException(400, "请填写 Base URL 和 API Key")
 
     try:
         if body.type == "claude":
@@ -115,9 +115,9 @@ async def list_available_models(body: ListModelsRequest):
                 models = sorted([m["id"] for m in data.get("data", [])])
         return {"ok": True, "models": models}
     except httpx.HTTPStatusError as e:
-        raise HTTPException(e.response.status_code, f"API error: {e.response.status_code}")
+        raise HTTPException(e.response.status_code, f"API 错误: {e.response.status_code}")
     except httpx.RequestError as e:
-        raise HTTPException(502, f"Connection failed: {e}")
+        raise HTTPException(502, f"连接失败: {e}")
 
 
 @router.get("/{provider_id}/raw-key")
@@ -125,7 +125,7 @@ async def get_provider_raw_key(provider_id: str):
     """Return the unmasked API key for editing."""
     p = config.get_provider(provider_id)
     if not p:
-        raise HTTPException(404, "provider not found")
+        raise HTTPException(404, "模型不存在")
     return {"api_key": p.get("api_key", "")}
 
 
@@ -134,9 +134,9 @@ async def list_provider_models(provider_id: str):
     """Use stored credentials to list available models for an existing provider."""
     p = config.get_provider(provider_id)
     if not p:
-        raise HTTPException(404, "provider not found")
+        raise HTTPException(404, "模型不存在")
     if not p.get("base_url") or not p.get("api_key"):
-        raise HTTPException(400, "provider missing base_url or api_key")
+        raise HTTPException(400, "模型缺少 Base URL 或 API Key")
 
     try:
         if p.get("type") == "claude":
@@ -161,9 +161,9 @@ async def list_provider_models(provider_id: str):
                 models = sorted([m["id"] for m in data.get("data", [])])
         return {"ok": True, "models": models}
     except httpx.HTTPStatusError as e:
-        raise HTTPException(e.response.status_code, f"API error: {e.response.status_code}")
+        raise HTTPException(e.response.status_code, f"API 错误: {e.response.status_code}")
     except httpx.RequestError as e:
-        raise HTTPException(502, f"Connection failed: {e}")
+        raise HTTPException(502, f"连接失败: {e}")
 
 
 class TestModelRequest(BaseModel):
@@ -180,7 +180,7 @@ async def test_provider_model(provider_id: str, body: TestModelRequest | None = 
     """
     stored = config.get_provider(provider_id)
     if not stored:
-        raise HTTPException(404, "provider not found")
+        raise HTTPException(404, "模型不存在")
 
     # Merge: body overrides stored, but skip masked/empty api_key
     p_type = (body and body.type) or stored.get("type", "openai_compat")
@@ -191,7 +191,7 @@ async def test_provider_model(provider_id: str, body: TestModelRequest | None = 
         p_key = body.api_key
 
     if not p_base or not p_key or not p_model:
-        raise HTTPException(400, "missing base_url, api_key, or model")
+        raise HTTPException(400, "缺少 Base URL、API Key 或模型名称")
 
     try:
         if p_type == "claude":
@@ -228,16 +228,16 @@ async def test_provider_model(provider_id: str, body: TestModelRequest | None = 
             detail = err_body.get("error", {}).get("message", "") or str(err_body)
         except Exception:
             detail = e.response.text[:200]
-        raise HTTPException(e.response.status_code, detail or f"HTTP {e.response.status_code}")
+        raise HTTPException(e.response.status_code, detail or f"HTTP 错误 {e.response.status_code}")
     except httpx.RequestError as e:
-        raise HTTPException(502, f"Connection failed: {e}")
+        raise HTTPException(502, f"连接失败: {e}")
 
 
 @router.get("/{provider_id}")
 async def get_provider(provider_id: str):
     p = config.get_provider(provider_id)
     if not p:
-        raise HTTPException(404, "provider not found")
+        raise HTTPException(404, "模型不存在")
     return _safe_provider(p)
 
 
@@ -257,7 +257,7 @@ async def update_provider(provider_id: str, body: ProviderUpdate):
 async def update_provider_model_key(provider_id: str, body: ProviderModelKeyUpdate):
     existing = config.get_provider(provider_id)
     if not existing:
-        raise HTTPException(404, "provider not found")
+        raise HTTPException(404, "模型不存在")
 
     data = dict(existing)
 
@@ -276,4 +276,4 @@ async def update_provider_model_key(provider_id: str, body: ProviderModelKeyUpda
 async def delete_provider(provider_id: str):
     if config.delete_provider(provider_id):
         return {"ok": True}
-    raise HTTPException(404, "provider not found")
+    raise HTTPException(404, "模型不存在")

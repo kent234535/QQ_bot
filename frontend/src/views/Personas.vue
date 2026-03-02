@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { listPersonas, createPersona, updatePersona, deletePersona, getSettings, updateSettings } from '@/api/client'
 
 const personas = ref<any[]>([])
@@ -62,6 +62,10 @@ async function saveEdit(id: string) {
   await load()
 }
 
+const sortedPersonas = computed(() =>
+  [...personas.value].sort((a, b) => (a.id === activePersonaId.value ? -1 : b.id === activePersonaId.value ? 1 : 0))
+)
+
 onMounted(load)
 </script>
 
@@ -86,7 +90,7 @@ onMounted(load)
       <button class="btn btn-success" @click="save">保存</button>
     </div>
 
-    <div v-for="p in personas" :key="p.id" class="card" :style="activePersonaId === p.id ? 'border: 2px solid #a8e6cf;' : ''">
+    <div v-for="p in sortedPersonas" :key="p.id" class="card" :style="activePersonaId === p.id ? 'border: 2px solid #a8e6cf;' : ''">
       <div class="flex-between">
         <div>
           <strong>{{ p.name }}</strong>
