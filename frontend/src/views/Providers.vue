@@ -23,7 +23,6 @@ const editForm = ref({
   api_key: '',
   model: '',
 })
-const editApiKeyMasked = ref('')
 const savingEdit = ref(false)
 
 // 检测模型
@@ -68,10 +67,11 @@ function startEdit(p: any) {
     name: p.name,
     type: p.type,
     base_url: p.base_url || '',
-    api_key: '',
+    api_key: p.api_key || '',
     model: p.model || '',
   }
-  editApiKeyMasked.value = p.api_key || ''
+  testResult.value = null
+  testingId.value = ''
 }
 
 function cancelEdit() {
@@ -99,7 +99,6 @@ async function testModel(id: string) {
   } catch (e: any) {
     testResult.value = { ok: false, msg: e.response?.data?.detail || '检测失败' }
   }
-  setTimeout(() => { if (testingId.value === id) { testingId.value = ''; testResult.value = null } }, 5000)
 }
 
 onMounted(load)
@@ -160,12 +159,6 @@ onMounted(load)
         API Key: {{ p.api_key || '未设置' }}
       </div>
 
-      <!-- 检测结果 -->
-      <div v-if="testingId === p.id && testResult" style="margin-top: 6px; font-size: 0.85em; font-weight: 600;"
-        :style="{ color: testResult.ok ? '#2a9d8f' : '#e63946' }">
-        {{ testResult.msg }}
-      </div>
-
       <div v-if="editingId === p.id" style="margin-top: 12px; border-top: 1px dashed #ddd; padding-top: 10px;">
         <div class="form-group">
           <label>名称</label>
@@ -183,8 +176,8 @@ onMounted(load)
           <input v-model="editForm.base_url" />
         </div>
         <div class="form-group">
-          <label>API Key（留空表示不修改）</label>
-          <input v-model="editForm.api_key" type="password" :placeholder="editApiKeyMasked || '输入新 key'" />
+          <label>API Key</label>
+          <input v-model="editForm.api_key" type="password" />
         </div>
         <div class="form-group">
           <div style="font-size: 0.8em; color: #888; margin-bottom: 4px;">请查阅 API 提供方的官方文档查看可用模型的完整字段</div>
@@ -192,8 +185,12 @@ onMounted(load)
           <div style="display: flex; gap: 8px;">
             <input v-model="editForm.model" placeholder="如 deepseek-chat" style="flex: 1;" />
             <button class="btn btn-primary btn-sm" :disabled="testingId === p.id && !testResult" @click="testModel(p.id)">
-              {{ testingId === p.id && !testResult ? '检测中...' : '检测模型' }}
+              {{ testingId === p.id && !testResult ? '检测中...' : '检测模型可用性' }}
             </button>
+          </div>
+          <div v-if="testingId === p.id && testResult" style="margin-top: 6px; font-size: 0.85em; font-weight: 600;"
+            :style="{ color: testResult.ok ? '#2a9d8f' : '#e63946' }">
+            {{ testResult.msg }}
           </div>
         </div>
         <div style="display: flex; gap: 8px;">
