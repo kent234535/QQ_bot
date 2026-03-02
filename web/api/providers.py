@@ -120,6 +120,43 @@ async def list_available_models(body: ListModelsRequest):
         raise HTTPException(502, f"Connection failed: {e}")
 
 
+@router.get("/{provider_id}/models")
+async def list_provider_models(provider_id: str):
+    """Use stored credentials to list available models for an existing provider."""
+    p = config.get_provider(provider_id)
+    if not p:
+        raise HTTPException(404, "provider not found")
+    if not p.get("base_url") or not p.get("api_key"):
+        raise HTTPException(400, "provider missing base_url or api_key")
+
+    try:
+        if p.get("type") == "claude":
+            base = p["base_url"].rstrip("/") if p.get("base_url") else "https://api.anthropic.com"
+            url = f"{base}/v1/models"
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.get(url, headers={
+                    "x-api-key": p["api_key"],
+                    "anthropic-version": "2023-06-01",
+                })
+                resp.raise_for_status()
+                data = resp.json()
+                models = sorted([m["id"] for m in data.get("data", [])])
+        else:
+            url = f"{p['base_url'].rstrip('/')}/models"
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.get(url, headers={
+                    "Authorization": f"Bearer {p['api_key']}",
+                })
+                resp.raise_for_status()
+                data = resp.json()
+                models = sorted([m["id"] for m in data.get("data", [])])
+        return {"ok": True, "models": models}
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(e.response.status_code, f"API error: {e.response.status_code}")
+    except httpx.RequestError as e:
+        raise HTTPException(502, f"Connection failed: {e}")
+
+
 @router.get("/{provider_id}")
 async def get_provider(provider_id: str):
     p = config.get_provider(provider_id)

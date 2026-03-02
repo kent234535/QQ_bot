@@ -18,6 +18,8 @@ export const updateProviderModelKey = (id: string, data: Record<string, unknown>
 export const deleteProvider = (id: string) => api.delete(`/providers/${id}`)
 export const listAvailableModels = (data: Record<string, unknown>) =>
   api.post('/providers/list-models', data, { timeout: 20000 })
+export const listProviderModels = (id: string) =>
+  api.get(`/providers/${id}/models`, { timeout: 20000 })
 
 // ── Personas ──
 export const listPersonas = () => api.get('/personas')

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { listProviders, createProvider, updateProvider, deleteProvider, listAvailableModels, getSettings, updateSettings } from '@/api/client'
+import { listProviders, createProvider, updateProvider, deleteProvider, listAvailableModels, listProviderModels, getSettings, updateSettings } from '@/api/client'
 
 const providers = ref<any[]>([])
 const activeProviderId = ref('')
@@ -116,26 +116,21 @@ function cancelEdit() {
 async function fetchEditModels(p: any) {
   editModelsError.value = ''
   editModels.value = []
-  const baseUrl = editForm.value.base_url || p.base_url
-  const apiKey = editForm.value.api_key
-  if (!baseUrl) {
-    editModelsError.value = '请先填写 Base URL'
-    return
-  }
-  // 编辑时 api_key 留空表示不修改，需要用已有的 key 来查询
-  // 但已有 key 是掩码的，所以必须填新 key 才能查询
-  if (!apiKey) {
-    editModelsError.value = '请先填写 API Key 以查询模型列表'
-    return
-  }
   editModelsLoading.value = true
   try {
-    const { data } = await listAvailableModels({
-      type: editForm.value.type,
-      base_url: baseUrl,
-      api_key: apiKey,
-    })
-    editModels.value = data.models || []
+    // If user filled a new API key, use it with the form values directly
+    if (editForm.value.api_key) {
+      const { data } = await listAvailableModels({
+        type: editForm.value.type,
+        base_url: editForm.value.base_url,
+        api_key: editForm.value.api_key,
+      })
+      editModels.value = data.models || []
+    } else {
+      // Otherwise use stored credentials via backend
+      const { data } = await listProviderModels(p.id)
+      editModels.value = data.models || []
+    }
     if (!editModels.value.length) editModelsError.value = '未找到可用模型'
   } catch (e: any) {
     editModelsError.value = e.response?.data?.detail || '获取模型列表失败'
