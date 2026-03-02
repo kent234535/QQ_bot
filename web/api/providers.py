@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ipaddress
 import re
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import httpx
@@ -12,6 +14,29 @@ from pydantic import BaseModel
 from config import config
 
 router = APIRouter()
+
+
+def _validate_base_url(url: str) -> None:
+    """校验 base_url，防止 SSRF：仅允许 http/https，禁止内网地址。"""
+    if not url:
+        return
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(400, "Base URL 仅支持 http/https 协议")
+    hostname = parsed.hostname or ""
+    if not hostname:
+        raise HTTPException(400, "Base URL 格式不正确")
+    # 禁止 localhost 和内网地址
+    if hostname in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+        raise HTTPException(400, "Base URL 不允许指向本地地址")
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if ip.is_private or ip.is_loopback or ip.is_link_local:
+            raise HTTPException(400, "Base URL 不允许指向内网地址")
+    except ValueError:
+        # hostname 不是 IP，是域名，检查常见内网域名
+        if hostname.endswith(".local") or hostname.endswith(".internal"):
+            raise HTTPException(400, "Base URL 不允许指向内网地址")
 
 
 def _mask_key(key: str) -> str:
@@ -81,6 +106,7 @@ async def list_providers():
 
 @router.post("")
 async def create_provider(body: ProviderCreate):
+    _validate_base_url(body.base_url)
     data = body.model_dump()
     data["id"] = _generate_provider_id(body.name)
     config.add_provider(data)
@@ -91,6 +117,7 @@ async def create_provider(body: ProviderCreate):
 async def list_available_models(body: ListModelsRequest):
     if not body.base_url or not body.api_key:
         raise HTTPException(400, "请填写 Base URL 和 API Key")
+    _validate_base_url(body.base_url)
 
     try:
         if body.type == "claude":
@@ -192,6 +219,7 @@ async def test_provider_model(provider_id: str, body: TestModelRequest | None = 
 
     if not p_base or not p_key or not p_model:
         raise HTTPException(400, "缺少 Base URL、API Key 或模型名称")
+    _validate_base_url(p_base)
 
     try:
         if p_type == "claude":
@@ -243,6 +271,7 @@ async def get_provider(provider_id: str):
 
 @router.put("/{provider_id}")
 async def update_provider(provider_id: str, body: ProviderUpdate):
+    _validate_base_url(body.base_url)
     data = body.model_dump()
     data["id"] = provider_id
     if not data.get("api_key") or "****" in data.get("api_key", ""):

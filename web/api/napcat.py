@@ -14,11 +14,12 @@ from fastapi.responses import FileResponse
 
 import httpx
 
+from config import config
+
 router = APIRouter()
 
 QQ_APP_PATH = "/Applications/QQ.app/Contents/MacOS/QQ"
 QQ_PACKAGE_JSON = Path("/Applications/QQ.app/Contents/Resources/app/package.json")
-QQ_ACCOUNT = "3540159556"
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 NAPCAT_PACKAGE = PROJECT_DIR / "package.json.napcat"
@@ -33,6 +34,18 @@ _QRCODE_IMAGE_CANDIDATES = [
     Path.home() / "Library/Application Support/QQ/NapCat/cache/qrcode.png",
     Path.home() / "Library/Containers/com.tencent.qq/Data/Library/Application Support/QQ/NapCat/cache/qrcode.png",
 ]
+
+
+def _parse_bool(value: object) -> bool:
+    """将上游可能返回的各种布尔值统一解析为 Python bool。
+    字符串 "false"/"0"/"no" → False，None → False，其余按 Python 真值判断。"""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() not in ("false", "0", "no", "")
+    if isinstance(value, (int, float)):
+        return value != 0
+    return value is not None
 
 
 # ─── 工具函数 ───
@@ -292,8 +305,8 @@ async def napcat_status():
                 )
                 if resp.get("code") == 0:
                     d = resp.get("data") or {}
-                    qq_login = d.get("isLogin")
-                    qq_offline = d.get("isOffline")
+                    qq_login = _parse_bool(d.get("isLogin"))
+                    qq_offline = _parse_bool(d.get("isOffline"))
                     login_error = str(d.get("loginError") or "")
 
     return {
@@ -329,8 +342,12 @@ async def start_napcat():
 
     # Step 3: 启动 QQ --no-sandbox
     try:
+        cmd = [QQ_APP_PATH, "--no-sandbox"]
+        qq_account = (config.settings.qq_account or "").strip()
+        if qq_account:
+            cmd.extend(["-q", qq_account])
         subprocess.Popen(
-            [QQ_APP_PATH, "--no-sandbox", "-q", QQ_ACCOUNT],
+            cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -366,7 +383,7 @@ async def start_napcat():
                     )
                     if resp.get("code") == 0:
                         d = resp.get("data") or {}
-                        if d.get("isLogin"):
+                        if _parse_bool(d.get("isLogin")):
                             return {"ok": True, "message": "NapCat 启动成功，QQ 已登录"}
                     await asyncio.sleep(2)
 
@@ -408,7 +425,7 @@ async def proxy_qrcode():
         )
         if status_resp.get("code") == 0:
             d = status_resp.get("data") or {}
-            if d.get("isLogin"):
+            if _parse_bool(d.get("isLogin")):
                 return {
                     "ok": True,
                     "is_login": True,
@@ -438,7 +455,7 @@ async def proxy_qrcode():
             if retry_status.get("code") != 0:
                 continue
             rd = retry_status.get("data") or {}
-            if rd.get("isLogin"):
+            if _parse_bool(rd.get("isLogin")):
                 return {
                     "ok": True,
                     "is_login": True,
