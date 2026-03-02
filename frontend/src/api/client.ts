@@ -16,6 +16,8 @@ export const updateProvider = (id: string, data: Record<string, unknown>) => api
 export const updateProviderModelKey = (id: string, data: Record<string, unknown>) =>
   api.patch(`/providers/${id}/model-key`, data)
 export const deleteProvider = (id: string) => api.delete(`/providers/${id}`)
+export const listAvailableModels = (data: Record<string, unknown>) =>
+  api.post('/providers/list-models', data, { timeout: 20000 })
 
 // ── Personas ──
 export const listPersonas = () => api.get('/personas')

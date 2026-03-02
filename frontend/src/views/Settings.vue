@@ -39,7 +39,7 @@ onMounted(load)
 
 <template>
   <div>
-    <h1>消息设置</h1>
+    <h1>设置</h1>
     <div class="card">
       <div class="form-group">
         <label>每用户最大交互次数</label>
