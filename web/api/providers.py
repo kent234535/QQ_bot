@@ -157,38 +157,56 @@ async def list_provider_models(provider_id: str):
         raise HTTPException(502, f"Connection failed: {e}")
 
 
+class TestModelRequest(BaseModel):
+    type: str | None = None
+    base_url: str | None = None
+    api_key: str | None = None
+    model: str | None = None
+
+
 @router.post("/{provider_id}/test")
-async def test_provider_model(provider_id: str):
-    """Send a minimal chat request to verify the model works."""
-    p = config.get_provider(provider_id)
-    if not p:
+async def test_provider_model(provider_id: str, body: TestModelRequest | None = None):
+    """Send a minimal chat request to verify the model works.
+    Body fields override stored values (useful for testing unsaved edits).
+    """
+    stored = config.get_provider(provider_id)
+    if not stored:
         raise HTTPException(404, "provider not found")
-    if not p.get("base_url") or not p.get("api_key") or not p.get("model"):
-        raise HTTPException(400, "provider missing base_url, api_key, or model")
+
+    # Merge: body overrides stored, but skip masked/empty api_key
+    p_type = (body and body.type) or stored.get("type", "openai_compat")
+    p_base = (body and body.base_url) or stored.get("base_url", "")
+    p_model = (body and body.model) or stored.get("model", "")
+    p_key = stored.get("api_key", "")
+    if body and body.api_key and "****" not in body.api_key:
+        p_key = body.api_key
+
+    if not p_base or not p_key or not p_model:
+        raise HTTPException(400, "missing base_url, api_key, or model")
 
     try:
-        if p.get("type") == "claude":
-            base = p["base_url"].rstrip("/") if p.get("base_url") else "https://api.anthropic.com"
+        if p_type == "claude":
+            base = p_base.rstrip("/") if p_base else "https://api.anthropic.com"
             url = f"{base}/v1/messages"
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(url, headers={
-                    "x-api-key": p["api_key"],
+                    "x-api-key": p_key,
                     "anthropic-version": "2023-06-01",
                     "Content-Type": "application/json",
                 }, json={
-                    "model": p["model"],
+                    "model": p_model,
                     "max_tokens": 5,
                     "messages": [{"role": "user", "content": "hi"}],
                 })
                 resp.raise_for_status()
         else:
-            url = f"{p['base_url'].rstrip('/')}/chat/completions"
+            url = f"{p_base.rstrip('/')}/chat/completions"
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(url, headers={
-                    "Authorization": f"Bearer {p['api_key']}",
+                    "Authorization": f"Bearer {p_key}",
                     "Content-Type": "application/json",
                 }, json={
-                    "model": p["model"],
+                    "model": p_model,
                     "max_tokens": 5,
                     "messages": [{"role": "user", "content": "hi"}],
                 })
@@ -197,8 +215,8 @@ async def test_provider_model(provider_id: str):
     except httpx.HTTPStatusError as e:
         detail = ""
         try:
-            body = e.response.json()
-            detail = body.get("error", {}).get("message", "") or str(body)
+            err_body = e.response.json()
+            detail = err_body.get("error", {}).get("message", "") or str(err_body)
         except Exception:
             detail = e.response.text[:200]
         raise HTTPException(e.response.status_code, detail or f"HTTP {e.response.status_code}")

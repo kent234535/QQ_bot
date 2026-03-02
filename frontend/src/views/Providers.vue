@@ -94,7 +94,12 @@ async function testModel(id: string) {
   testingId.value = id
   testResult.value = null
   try {
-    await testProviderModel(id)
+    await testProviderModel(id, {
+      type: editForm.value.type,
+      base_url: editForm.value.base_url,
+      api_key: editForm.value.api_key,
+      model: editForm.value.model,
+    })
     testResult.value = { ok: true, msg: '模型可用' }
   } catch (e: any) {
     testResult.value = { ok: false, msg: e.response?.data?.detail || '检测失败' }
