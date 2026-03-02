@@ -1,7 +1,7 @@
 """
 AI 私聊自动回复插件（重构版）
 - 仅响应私聊消息
-- 通过 config 模块获取设置、人格、AI 提供商
+- 通过 config 模块获取设置、角色、AI 提供商
 - 支持上下文截断、冷却时间、可配置限制
 """
 
@@ -64,7 +64,7 @@ async def handle_private(bot: Bot, event: PrivateMessageEvent):
         )
         return
 
-    # ── 获取人格 ──
+    # ── 获取角色 ──
     persona = config.get_persona(settings.active_persona_id)
     system_prompt = persona["system_prompt"] if persona else "你是一个智能助手。"
 
@@ -72,7 +72,7 @@ async def handle_private(bot: Bot, event: PrivateMessageEvent):
     if user_id not in _histories:
         _histories[user_id] = [{"role": "system", "content": system_prompt}]
     else:
-        # 如果人格变更，更新 system prompt
+        # 如果角色变更，更新 system prompt
         if _histories[user_id] and _histories[user_id][0]["role"] == "system":
             _histories[user_id][0]["content"] = system_prompt
 

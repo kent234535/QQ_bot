@@ -48,7 +48,7 @@ onMounted(load)
         </select>
       </div>
       <div class="form-group">
-        <label>当前人格</label>
+        <label>当前角色</label>
         <select v-model="form.active_persona_id">
           <option v-for="p in personas" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>

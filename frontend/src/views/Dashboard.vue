@@ -45,7 +45,7 @@ onMounted(fetchStatus)
         </div>
       </div>
       <div class="card" style="flex: 1; min-width: 200px;">
-        <div style="font-size: 0.85em; color: #888;">当前人格</div>
+        <div style="font-size: 0.85em; color: #888;">当前角色</div>
         <div style="font-size: 1.2em; font-weight: 600; margin-top: 4px;">
           {{ status.active_persona || '未配置' }}
         </div>
@@ -60,7 +60,7 @@ onMounted(fetchStatus)
         </div>
       </div>
       <div class="card" style="flex: 1; min-width: 200px;">
-        <div style="font-size: 0.85em; color: #888;">人格数</div>
+        <div style="font-size: 0.85em; color: #888;">角色数</div>
         <div style="font-size: 1.4em; font-weight: 700; margin-top: 4px;">
           {{ status.personas_count }}
         </div>

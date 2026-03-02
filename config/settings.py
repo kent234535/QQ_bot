@@ -12,4 +12,4 @@ class BotSettings(BaseModel):
     cooldown_seconds: int = Field(0, ge=0, description="用户消息冷却时间（秒）")
     max_context_messages: int = Field(50, ge=2, description="保留的最大上下文消息数")
     active_provider_id: str = Field("", description="当前使用的 AI 提供商 ID")
-    active_persona_id: str = Field("catgirl", description="当前使用的人格 ID")
+    active_persona_id: str = Field("catgirl", description="当前使用的角色 ID")

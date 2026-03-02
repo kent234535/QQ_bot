@@ -7,7 +7,7 @@ const navItems = [
   { path: '/', label: '仪表盘', icon: '📊' },
   { path: '/settings', label: '设置', icon: '⚙️' },
   { path: '/providers', label: 'AI 提供商', icon: '🤖' },
-  { path: '/personas', label: '人格', icon: '🎭' },
+  { path: '/personas', label: '角色', icon: '🎭' },
   { path: '/napcat', label: 'NapCat', icon: '🐱' },
 ]
 </script>

@@ -1,6 +1,6 @@
 # QQ Bot — 猫娘聊天机器人
 
-基于 NoneBot2 + NapCat 的 QQ 聊天机器人，支持多 AI 提供商、多人格切换、Web 控制台管理。
+基于 NoneBot2 + NapCat 的 QQ 聊天机器人，支持多 AI 提供商、多角色切换、Web 控制台管理。
 
 ## 快速开始
 
@@ -32,7 +32,7 @@ QQ_bot/
 │   ├── settings.py         # Pydantic 设置模型
 │   └── defaults.py         # 默认值 + 内置预设
 ├── models/                 # 数据模型
-│   ├── persona.py          # 人格模型
+│   ├── persona.py          # 角色模型
 │   └── provider.py         # AI 提供商模型
 ├── providers/              # AI 提供商适配器
 │   ├── base.py             # 抽象基类 AIProvider
@@ -57,7 +57,7 @@ QQ_bot/
 |------|------|
 | `data/settings.json` | 全局设置（交互次数限制、Token 限制、温度等） |
 | `data/providers.json` | AI 提供商列表（API Key、模型、Base URL） |
-| `data/personas.json` | 人格列表（System Prompt） |
+| `data/personas.json` | 角色列表（角色描述） |
 
 首次运行自动生成默认配置。
 
@@ -70,15 +70,15 @@ QQ_bot/
 
 通过 Web 控制台的「AI 提供商」页面添加和管理。
 
-## 内置人格
+## 内置角色
 
-| ID | 名称 | 描述 |
-|----|------|------|
-| `catgirl` | 猫娘 | 可爱猫娘，温柔撒娇 |
-| `assistant` | 智能助手 | 通用专业助手 |
-| `programmer` | 程序员 | 资深程序员，代码优先 |
+| ID | 名称 |
+|----|------|
+| `catgirl` | 猫娘 |
+| `assistant` | 智能助手 |
+| `programmer` | 程序员 |
 
-可在 Web 控制台添加自定义人格。
+可在 Web 控制台添加或编辑角色。
 
 ## NapCat 管理
 
