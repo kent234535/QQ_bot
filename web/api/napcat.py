@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse
 
 import httpx
 
-from config import config
+from config import config as app_config
 
 router = APIRouter()
 
@@ -343,7 +343,7 @@ async def start_napcat():
     # Step 3: 启动 QQ --no-sandbox
     try:
         cmd = [QQ_APP_PATH, "--no-sandbox"]
-        qq_account = (config.settings.qq_account or "").strip()
+        qq_account = (app_config.settings.qq_account or "").strip()
         if qq_account:
             cmd.extend(["-q", qq_account])
         subprocess.Popen(
