@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 
 from fastapi import APIRouter
+from fastapi.responses import FileResponse
 
 import httpx
 
@@ -27,6 +28,10 @@ ORIGINAL_PACKAGE = PROJECT_DIR / "package.json.original"
 _WEBUI_CONFIG_CANDIDATES = [
     Path.home() / "Library/Application Support/QQ/NapCat/config/webui.json",
     Path.home() / "Library/Containers/com.tencent.qq/Data/Library/Application Support/QQ/NapCat/config/webui.json",
+]
+_QRCODE_IMAGE_CANDIDATES = [
+    Path.home() / "Library/Application Support/QQ/NapCat/cache/qrcode.png",
+    Path.home() / "Library/Containers/com.tencent.qq/Data/Library/Application Support/QQ/NapCat/cache/qrcode.png",
 ]
 
 
@@ -178,6 +183,37 @@ async def _napcat_api(
         return {"code": -1, "message": str(e)}
 
 
+def _find_qrcode_image() -> Path | None:
+    """查找最近生成的 QQ 登录二维码图片"""
+    files: list[Path] = []
+    for p in _QRCODE_IMAGE_CANDIDATES:
+        try:
+            if p.exists() and p.is_file() and p.stat().st_size > 0:
+                files.append(p)
+        except Exception:
+            continue
+    if not files:
+        return None
+    return max(files, key=lambda x: x.stat().st_mtime)
+
+
+def _build_qrcode_payload(qrcode_url: str = "", message: str = "") -> dict:
+    """统一构建二维码返回结构"""
+    payload: dict = {"ok": True}
+    if qrcode_url:
+        payload["qrcode_url"] = qrcode_url
+    p = _find_qrcode_image()
+    if p:
+        try:
+            ts = int(p.stat().st_mtime)
+        except Exception:
+            ts = 0
+        payload["qrcode_image_api"] = f"/api/napcat/qrcode_image?ts={ts}"
+    if message:
+        payload["message"] = message
+    return payload
+
+
 # ─── 进程管理 ───
 
 def _is_qq_running() -> bool:
@@ -256,8 +292,8 @@ async def napcat_status():
                 )
                 if resp.get("code") == 0:
                     d = resp.get("data") or {}
-                    qq_login = bool(d.get("isLogin"))
-                    qq_offline = bool(d.get("isOffline"))
+                    qq_login = d.get("isLogin")
+                    qq_offline = d.get("isOffline")
                     login_error = str(d.get("loginError") or "")
 
     return {
@@ -358,7 +394,7 @@ async def proxy_qrcode():
                 }
             qrcode_url = str(d.get("qrcodeurl") or "")
             if qrcode_url:
-                return {"ok": True, "qrcode_url": qrcode_url}
+                return _build_qrcode_payload(qrcode_url)
 
         # 主动获取二维码
         qr_resp = await _napcat_api(
@@ -367,7 +403,41 @@ async def proxy_qrcode():
         if qr_resp.get("code") == 0:
             qrcode_url = str((qr_resp.get("data") or {}).get("qrcode") or "")
             if qrcode_url:
-                return {"ok": True, "qrcode_url": qrcode_url}
+                return _build_qrcode_payload(qrcode_url)
             return {"ok": False, "message": "NapCat 未返回二维码，请稍后重试"}
 
+        # NapCat 常见首轮返回 "QRCode Get Error"，这里主动刷新并重试
+        await _napcat_api(client, base_url, "/api/QQLogin/RefreshQRcode", credential)
+        for _ in range(6):
+            await asyncio.sleep(1)
+            retry_status = await _napcat_api(
+                client, base_url, "/api/QQLogin/CheckLoginStatus", credential,
+            )
+            if retry_status.get("code") != 0:
+                continue
+            rd = retry_status.get("data") or {}
+            if rd.get("isLogin"):
+                return {
+                    "ok": True,
+                    "is_login": True,
+                    "message": "QQ 已登录，无需二维码",
+                }
+            qrcode_url = str(rd.get("qrcodeurl") or "")
+            if qrcode_url:
+                return _build_qrcode_payload(qrcode_url)
+
+        # 兜底：即使链接未取到，只要本地图片已生成，前端仍可显示扫码
+        local_payload = _build_qrcode_payload(message="二维码已刷新，请直接扫描下方图片")
+        if local_payload.get("qrcode_image_api"):
+            return local_payload
+
         return {"ok": False, "message": qr_resp.get("message", "获取二维码失败")}
+
+
+@router.get("/qrcode_image")
+async def get_qrcode_image():
+    """返回 NapCat 生成的二维码图片（png）"""
+    p = _find_qrcode_image()
+    if not p:
+        return {"ok": False, "message": "二维码图片不存在，请先点击“获取登录二维码”"}
+    return FileResponse(str(p), media_type="image/png", filename="qrcode.png")

@@ -71,7 +71,7 @@ onMounted(fetchStatus)
       <div v-if="status" style="margin-top: 8px; font-size: 0.85em; color: #666;">
         <div>QQ 模式:
           <span :style="{ color: status.napcat_mode ? '#2a9d8f' : '#e63946', fontWeight: 600 }">
-            {{ status.napcat_mode ? 'NapCat 模式' : '普通模式（启动时自动切换）' }}
+            {{ status.napcat_mode ? 'NapCat 模式' : '普通模式' }}
           </span>
         </div>
         <div>WebUI:
@@ -103,9 +103,9 @@ onMounted(fetchStatus)
       <div v-if="qrcode.message" style="margin-top: 8px;" :style="{ color: qrcode.ok === false ? '#e63946' : '#555' }">
         {{ qrcode.message }}
       </div>
-      <div v-if="qrcode.qrcode_url" style="margin-top: 10px;">
+      <div v-if="qrcode.qrcode_image_api" style="margin-top: 10px;">
         <img
-          :src="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(qrcode.qrcode_url)"
+          :src="qrcode.qrcode_image_api"
           alt="QQ 登录二维码"
           style="width: 220px; height: 220px; border: 1px solid #ddd; border-radius: 8px; background: #fff;"
         />
