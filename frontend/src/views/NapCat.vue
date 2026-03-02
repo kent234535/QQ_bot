@@ -55,12 +55,12 @@ onMounted(fetchStatus)
 
 <template>
   <div>
-    <h1>NapCat 管理</h1>
+    <h1>连接管理</h1>
 
     <div class="card">
       <div class="flex-between">
         <div>
-          <strong>NapCat 状态</strong>
+          <strong>连接状态</strong>
           <span v-if="status" class="badge" :class="status.qq_login === true ? 'badge-green' : status.webui_reachable ? 'badge-green' : status.qq_running ? 'badge-gray' : 'badge-red'" style="margin-left: 8px;">
             {{ status.qq_login === true ? 'QQ 已登录' : status.webui_reachable ? (status.qq_login === false ? '运行中（QQ 未登录）' : '运行中') : status.qq_running ? 'QQ 已启动，WebUI 未就绪' : '已停止' }}
           </span>

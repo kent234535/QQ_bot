@@ -4,11 +4,10 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const navItems = [
-  { path: '/', label: '仪表盘', icon: '📊' },
-  { path: '/settings', label: '设置', icon: '⚙️' },
+  { path: '/', label: '消息设置', icon: '⚙️' },
   { path: '/providers', label: 'AI 提供商', icon: '🤖' },
   { path: '/personas', label: '角色', icon: '🎭' },
-  { path: '/napcat', label: 'NapCat', icon: '🐱' },
+  { path: '/napcat', label: '连接', icon: '🔗' },
 ]
 </script>
 

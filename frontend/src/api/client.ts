@@ -5,9 +5,6 @@ const api = axios.create({
   timeout: 15000,
 })
 
-// ── Status ──
-export const getStatus = () => api.get('/status')
-
 // ── Settings ──
 export const getSettings = () => api.get('/settings')
 export const updateSettings = (data: Record<string, unknown>) => api.put('/settings', data)

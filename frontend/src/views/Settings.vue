@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getSettings, updateSettings, listProviders, listPersonas } from '@/api/client'
+import { getSettings, updateSettings } from '@/api/client'
 
 const form = ref({
   max_interactions: 10,
@@ -9,18 +9,19 @@ const form = ref({
   timeout: 120,
   cooldown_seconds: 0,
   max_context_messages: 50,
-  active_provider_id: '',
-  active_persona_id: 'catgirl',
 })
-const providers = ref<any[]>([])
-const personas = ref<any[]>([])
 const msg = ref('')
 
 async function load() {
-  const [s, p, pe] = await Promise.all([getSettings(), listProviders(), listPersonas()])
-  form.value = s.data
-  providers.value = p.data
-  personas.value = pe.data
+  const { data } = await getSettings()
+  form.value = {
+    max_interactions: data.max_interactions,
+    max_tokens: data.max_tokens,
+    temperature: data.temperature,
+    timeout: data.timeout,
+    cooldown_seconds: data.cooldown_seconds,
+    max_context_messages: data.max_context_messages,
+  }
 }
 
 async function save() {
@@ -38,21 +39,8 @@ onMounted(load)
 
 <template>
   <div>
-    <h1>设置</h1>
+    <h1>消息设置</h1>
     <div class="card">
-      <div class="form-group">
-        <label>当前 AI 提供商</label>
-        <select v-model="form.active_provider_id">
-          <option value="">自动选择</option>
-          <option v-for="p in providers" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>当前角色</label>
-        <select v-model="form.active_persona_id">
-          <option v-for="p in personas" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
-      </div>
       <div class="form-group">
         <label>每用户最大交互次数</label>
         <input type="number" v-model.number="form.max_interactions" min="1" />

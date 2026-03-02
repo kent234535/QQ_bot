@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { listProviders, createProvider, updateProviderModelKey, deleteProvider } from '@/api/client'
+import { listProviders, createProvider, updateProviderModelKey, deleteProvider, getSettings, updateSettings } from '@/api/client'
 
 const providers = ref<any[]>([])
+const activeProviderId = ref('')
 const showForm = ref(false)
 const form = ref({
   id: '',
@@ -14,15 +15,13 @@ const form = ref({
   enabled: true,
 })
 const editingId = ref('')
-const editForm = ref({
-  model: '',
-  api_key: '',
-})
+const editForm = ref({ model: '', api_key: '' })
 const savingEdit = ref(false)
 
 async function load() {
-  const { data } = await listProviders()
-  providers.value = data
+  const [p, s] = await Promise.all([listProviders(), getSettings()])
+  providers.value = p.data
+  activeProviderId.value = s.data.active_provider_id || ''
 }
 
 function resetForm() {
@@ -40,15 +39,20 @@ async function save() {
 async function remove(id: string) {
   if (!confirm('确认删除该提供商？')) return
   await deleteProvider(id)
+  if (activeProviderId.value === id) {
+    await updateSettings({ active_provider_id: '' })
+  }
   await load()
+}
+
+async function activate(id: string) {
+  await updateSettings({ active_provider_id: id })
+  activeProviderId.value = id
 }
 
 function startEdit(provider: any) {
   editingId.value = provider.id
-  editForm.value = {
-    model: provider.model || '',
-    api_key: '',
-  }
+  editForm.value = { model: provider.model || '', api_key: '' }
 }
 
 function cancelEdit() {
@@ -113,17 +117,16 @@ onMounted(load)
       <button class="btn btn-success" @click="save">保存</button>
     </div>
 
-    <div v-for="p in providers" :key="p.id" class="card">
+    <div v-for="p in providers" :key="p.id" class="card" :style="activeProviderId === p.id ? 'border: 2px solid #a8e6cf;' : ''">
       <div class="flex-between">
         <div>
           <strong>{{ p.name }}</strong>
-          <span class="badge" :class="p.enabled ? 'badge-green' : 'badge-red'" style="margin-left: 8px;">
-            {{ p.enabled ? '启用' : '禁用' }}
-          </span>
+          <span v-if="activeProviderId === p.id" class="badge badge-green" style="margin-left: 8px;">当前启用</span>
           <span class="badge badge-gray" style="margin-left: 4px;">{{ p.type }}</span>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button class="btn btn-primary btn-sm" @click="startEdit(p)">编辑模型/API Key</button>
+          <button v-if="activeProviderId !== p.id" class="btn btn-success btn-sm" @click="activate(p.id)">启用</button>
+          <button class="btn btn-primary btn-sm" @click="startEdit(p)">编辑</button>
           <button class="btn btn-danger btn-sm" @click="remove(p.id)">删除</button>
         </div>
       </div>

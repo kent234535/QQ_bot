@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { listPersonas, createPersona, updatePersona, deletePersona } from '@/api/client'
+import { listPersonas, createPersona, updatePersona, deletePersona, getSettings, updateSettings } from '@/api/client'
 
 const personas = ref<any[]>([])
+const activePersonaId = ref('')
 const showForm = ref(false)
 const form = ref({ id: '', name: '', system_prompt: '' })
 
@@ -10,8 +11,9 @@ const editingId = ref('')
 const editForm = ref({ name: '', system_prompt: '' })
 
 async function load() {
-  const { data } = await listPersonas()
-  personas.value = data
+  const [pe, s] = await Promise.all([listPersonas(), getSettings()])
+  personas.value = pe.data
+  activePersonaId.value = s.data.active_persona_id || ''
 }
 
 function resetForm() {
@@ -33,7 +35,15 @@ async function remove(id: string) {
   } catch (e: any) {
     alert(e.response?.data?.detail || '删除失败')
   }
+  if (activePersonaId.value === id) {
+    await updateSettings({ active_persona_id: '' })
+  }
   await load()
+}
+
+async function activate(id: string) {
+  await updateSettings({ active_persona_id: id })
+  activePersonaId.value = id
 }
 
 function startEdit(p: any) {
@@ -80,13 +90,15 @@ onMounted(load)
       <button class="btn btn-success" @click="save">保存</button>
     </div>
 
-    <div v-for="p in personas" :key="p.id" class="card">
+    <div v-for="p in personas" :key="p.id" class="card" :style="activePersonaId === p.id ? 'border: 2px solid #a8e6cf;' : ''">
       <div class="flex-between">
         <div>
           <strong>{{ p.name }}</strong>
-          <span v-if="p.builtin" class="badge badge-gray" style="margin-left: 8px;">内置</span>
+          <span v-if="activePersonaId === p.id" class="badge badge-green" style="margin-left: 8px;">当前启用</span>
+          <span v-if="p.builtin" class="badge badge-gray" style="margin-left: 4px;">内置</span>
         </div>
         <div style="display: flex; gap: 8px;">
+          <button v-if="activePersonaId !== p.id" class="btn btn-success btn-sm" @click="activate(p.id)">启用</button>
           <button class="btn btn-primary btn-sm" @click="startEdit(p)">编辑</button>
           <button class="btn btn-danger btn-sm" @click="remove(p.id)">删除</button>
         </div>
