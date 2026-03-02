@@ -3,12 +3,12 @@ import { ref, onMounted } from 'vue'
 import { getSettings, updateSettings } from '@/api/client'
 
 const form = ref({
-  max_interactions: 10,
-  max_tokens: 1000,
+  max_interactions: 20,
+  max_tokens: 2000,
   temperature: 0.8,
-  timeout: 120,
-  cooldown_seconds: 0,
-  max_context_messages: 50,
+  timeout: 20,
+  cooldown_seconds: 5,
+  max_context_messages: 20,
 })
 const msg = ref('')
 

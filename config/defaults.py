@@ -1,12 +1,12 @@
 """默认配置值"""
 
 DEFAULT_SETTINGS = {
-    "max_interactions": 10,
-    "max_tokens": 1000,
+    "max_interactions": 20,
+    "max_tokens": 2000,
     "temperature": 0.8,
-    "timeout": 120,
-    "cooldown_seconds": 0,
-    "max_context_messages": 50,
+    "timeout": 20,
+    "cooldown_seconds": 5,
+    "max_context_messages": 20,
     "active_provider_id": "",
     "active_persona_id": "catgirl",
 }
