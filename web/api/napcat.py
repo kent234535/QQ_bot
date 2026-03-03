@@ -258,60 +258,39 @@ def _build_qrcode_payload(qrcode_url: str = "", message: str = "") -> dict:
 
 # ─── 进程管理 ───
 
-def _qq_pids() -> list[int]:
-    """返回由 QQ_APP_PATH 启动的所有进程 PID（精确匹配，不误杀其他 QQ 实例）"""
+def _is_qq_running() -> bool:
+    """检查是否有任何 QQ 进程在运行"""
     try:
         if _IS_WIN:
             result = subprocess.run(
-                ["wmic", "process", "where",
-                 f"ExecutablePath='{QQ_APP_PATH.replace(chr(92), chr(92)*2)}'",
-                 "get", "ProcessId", "/format:list"],
+                ["tasklist", "/FI", "IMAGENAME eq QQ.exe", "/NH"],
                 capture_output=True, text=True, timeout=5,
             )
-            return [int(x.split("=")[1]) for x in result.stdout.strip().splitlines()
-                    if x.startswith("ProcessId=")]
+            return "QQ.exe" in result.stdout
         else:
-            # pgrep -f 精确匹配完整路径，避免 QQ_小号.app 等被误匹配
             result = subprocess.run(
-                ["pgrep", "-f", QQ_APP_PATH],
+                ["pgrep", "-fi", "QQ"],
                 capture_output=True, text=True, timeout=3,
             )
-            return [int(p) for p in result.stdout.strip().split("\n") if p.strip()]
+            return bool(result.stdout.strip())
     except Exception:
-        return []
-
-
-def _is_qq_running() -> bool:
-    """检查目标 QQ 进程是否在运行"""
-    return len(_qq_pids()) > 0
+        return False
 
 
 def _kill_all_qq() -> None:
-    """杀掉目标 QQ 的所有相关进程"""
-    pids = _qq_pids()
-    if not pids:
-        return
+    """杀掉电脑上所有 QQ 相关进程"""
     if _IS_WIN:
-        for pid in pids:
-            subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)],
-                           capture_output=True, timeout=5)
+        subprocess.run(["taskkill", "/F", "/IM", "QQ.exe"], capture_output=True, timeout=5)
     else:
-        for pid in pids:
-            subprocess.run(["kill", str(pid)], capture_output=True, timeout=3)
+        subprocess.run(["pkill", "-fi", "QQ"], capture_output=True, timeout=5)
 
 
 def _force_kill_all_qq() -> None:
-    """强制杀掉目标 QQ 的所有残留进程"""
-    pids = _qq_pids()
-    if not pids:
-        return
+    """强制杀掉电脑上所有 QQ 残留进程"""
     if _IS_WIN:
-        for pid in pids:
-            subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)],
-                           capture_output=True, timeout=5)
+        subprocess.run(["taskkill", "/F", "/T", "/IM", "QQ.exe"], capture_output=True, timeout=5)
     else:
-        for pid in pids:
-            subprocess.run(["kill", "-9", str(pid)], capture_output=True, timeout=3)
+        subprocess.run(["pkill", "-9", "-fi", "QQ"], capture_output=True, timeout=5)
 
 
 async def _ensure_qq_killed() -> bool:

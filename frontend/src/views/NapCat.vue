@@ -100,11 +100,11 @@ onUnmounted(() => {
     <div class="card">
       <strong>操作</strong>
       <div style="margin-top: 8px; font-size: 0.85em; color: #888;">
-        第一步：启动消息代理服务 → 第二步：登录 QQ（扫码）
+        第一步：启动 QQ 消息代理 → 第二步：登录 QQ（扫码）
       </div>
       <div class="flex gap-8 mt-10">
-        <button class="btn btn-success" @click="doStart" :disabled="loading">启动消息代理服务</button>
-        <button class="btn btn-primary" @click="fetchQRCode" :disabled="loading || !status || !status.webui_reachable">登录 QQ（获取二维码）</button>
+        <button class="btn btn-success" @click="doStart" :disabled="loading">启动 QQ 消息代理</button>
+        <button class="btn btn-primary" @click="fetchQRCode" :disabled="loading || !status || !status.webui_reachable">登录 QQ</button>
         <button class="btn btn-danger" @click="doStop" :disabled="loading">停止</button>
       </div>
       <div v-if="msg" style="margin-top: 10px; color: #555;">{{ msg }}</div>
