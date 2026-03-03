@@ -6,6 +6,7 @@ import asyncio
 import glob as _glob
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -17,6 +18,16 @@ from pydantic import BaseModel
 import httpx
 
 router = APIRouter()
+
+
+def _get_nonebot_ws() -> str:
+    """从环境变量 / .env 读取 HOST 和 PORT，动态拼接 NoneBot2 WS 地址"""
+    host = os.environ.get("HOST", "127.0.0.1") or "127.0.0.1"
+    port = os.environ.get("PORT", "8080") or "8080"
+    # 0.0.0.0 / :: 监听全接口时，NapCat 仍连 localhost
+    if host in ("0.0.0.0", "::", "::0"):
+        host = "127.0.0.1"
+    return f"ws://{host}:{port}/onebot/v11/ws"
 
 # ─── 平台检测 ───
 
@@ -90,7 +101,20 @@ def _detect_all_qq_apps() -> list[dict]:
                     "name": name,
                 })
     elif _IS_WIN:
-        for d in [r"C:\Program Files\Tencent\QQNT"]:
+        _WIN_QQ_DIRS = [
+            r"C:\Program Files\Tencent\QQNT",
+            r"C:\Program Files (x86)\Tencent\QQNT",
+            r"D:\Program Files\Tencent\QQNT",
+            r"D:\Program Files (x86)\Tencent\QQNT",
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Tencent\QQNT"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Tencent\QQNT"),
+        ]
+        seen: set[str] = set()
+        for d in _WIN_QQ_DIRS:
+            d = os.path.normpath(d)
+            if d in seen:
+                continue
+            seen.add(d)
             pkg = _app_pkg(d)
             if pkg.exists():
                 apps.append({
@@ -140,8 +164,6 @@ def _save_original_main() -> None:
 
 
 _original_main: dict[str, str] = _load_original_main()
-# NoneBot2 的 WebSocket 地址（NapCat 需要连接到这里）
-_NONEBOT_WS = "ws://127.0.0.1:8080/onebot/v11/ws"
 
 _WEBUI_CONFIG_CANDIDATES: list[Path]
 _QRCODE_IMAGE_CANDIDATES: list[Path]
@@ -208,7 +230,7 @@ def _enable_onebot11_ws() -> str:
             ws_clients = network.get("websocketClients", [])
 
             has_nonebot = any(
-                c.get("url") == _NONEBOT_WS and c.get("enable")
+                c.get("url") == _get_nonebot_ws() and c.get("enable")
                 for c in ws_clients
             )
             if has_nonebot:
@@ -216,7 +238,7 @@ def _enable_onebot11_ws() -> str:
 
             ws_clients.append({
                 "enable": True,
-                "url": _NONEBOT_WS,
+                "url": _get_nonebot_ws(),
                 "reconnectIntervalMs": 5000,
                 "heartIntervalMs": 30000,
                 "accessToken": "",
@@ -236,7 +258,8 @@ def _enable_onebot11_ws() -> str:
 
 
 def _disable_onebot11_ws() -> None:
-    """断开时清空所有 onebot11 配置的 WebSocket 客户端，不残留连接配置。"""
+    """断开时只移除本项目注入的 WebSocket 客户端条目，保留用户原有配置。"""
+    nonebot_ws = _get_nonebot_ws()
     for config_dir in _NAPCAT_CONFIG_DIRS:
         if not config_dir.exists():
             continue
@@ -246,9 +269,13 @@ def _disable_onebot11_ws() -> None:
             except Exception:
                 continue
             network = data.get("network", {})
-            if not network.get("websocketClients"):
+            ws_clients = network.get("websocketClients", [])
+            if not ws_clients:
                 continue
-            network["websocketClients"] = []
+            filtered = [c for c in ws_clients if c.get("url") != nonebot_ws]
+            if len(filtered) == len(ws_clients):
+                continue  # 没有我们注入的条目，跳过
+            network["websocketClients"] = filtered
             data["network"] = network
             try:
                 f.write_text(
@@ -496,6 +523,21 @@ def _get_qq_pids() -> list[int]:
         return []
     try:
         if _IS_WIN:
+            # 优先 PowerShell Get-CimInstance（wmic 在新版 Windows 可能不可用）
+            escaped = _active_exe.replace("\\", "\\\\")
+            try:
+                result = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command",
+                     f"Get-CimInstance Win32_Process -Filter \"ExecutablePath='{escaped}'\" "
+                     "| Select-Object -ExpandProperty ProcessId"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                pids = [int(p) for p in result.stdout.strip().split() if p.strip().isdigit()]
+                if pids or result.returncode == 0:
+                    return pids
+            except Exception:
+                pass
+            # fallback: wmic
             result = subprocess.run(
                 ["wmic", "process", "where",
                  f"ExecutablePath='{_active_exe.replace(chr(92), chr(92)*2)}'",
