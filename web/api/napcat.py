@@ -168,8 +168,8 @@ else:
     ]
 
 
-def _ensure_onebot11_config() -> str:
-    """检查所有 NapCat onebot11 配置文件，确保 WebSocket 客户端指向 NoneBot2。
+def _enable_onebot11_ws() -> str:
+    """为所有 onebot11 配置写入 WebSocket 客户端，指向 NoneBot2。
     返回修复信息（空字符串表示无需修复）。"""
     fixed: list[str] = []
     for config_dir in _NAPCAT_CONFIG_DIRS:
@@ -183,7 +183,6 @@ def _ensure_onebot11_config() -> str:
             network = data.get("network", {})
             ws_clients = network.get("websocketClients", [])
 
-            # 检查是否已有指向 NoneBot2 的配置
             has_nonebot = any(
                 c.get("url") == _NONEBOT_WS and c.get("enable")
                 for c in ws_clients
@@ -191,7 +190,6 @@ def _ensure_onebot11_config() -> str:
             if has_nonebot:
                 continue
 
-            # 添加 WebSocket 客户端配置
             ws_clients.append({
                 "enable": True,
                 "url": _NONEBOT_WS,
@@ -211,6 +209,30 @@ def _ensure_onebot11_config() -> str:
             except Exception:
                 pass
     return f"已为账号 {', '.join(fixed)} 配置消息转发" if fixed else ""
+
+
+def _disable_onebot11_ws() -> None:
+    """断开时清空所有 onebot11 配置的 WebSocket 客户端，不残留连接配置。"""
+    for config_dir in _NAPCAT_CONFIG_DIRS:
+        if not config_dir.exists():
+            continue
+        for f in config_dir.glob("onebot11_*.json"):
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            network = data.get("network", {})
+            if not network.get("websocketClients"):
+                continue
+            network["websocketClients"] = []
+            data["network"] = network
+            try:
+                f.write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+            except Exception:
+                pass
 
 
 # ─── NapCat 模式切换（修改 package.json 的 main 字段） ───
@@ -543,7 +565,7 @@ async def napcat_status():
 
     # QQ 登录后自动确保 OneBot11 配置正确
     if qq_login:
-        _ensure_onebot11_config()
+        _enable_onebot11_ws()
 
     return {
         "connected": connected,
@@ -574,10 +596,10 @@ async def set_active_app(body: SetAppRequest):
 
     # 如果当前有连接，自动断开再切换
     if _is_qq_running() or await _check_webui_reachable():
-        # 恢复当前 App 的 package.json
         old_pkg = _get_active_pkg()
         if old_pkg:
             _disable_napcat(old_pkg)
+        _disable_onebot11_ws()
         await _ensure_qq_killed()
 
     _active_exe = exe
@@ -650,7 +672,7 @@ async def connect_napcat():
         await asyncio.sleep(2)
         if await _check_webui_reachable(base_url):
             # 确保 OneBot11 配置正确（自动为所有账号配置消息转发）
-            _ensure_onebot11_config()
+            _enable_onebot11_ws()
             return await _fetch_qrcode_result()
 
     if _is_qq_running():
@@ -719,24 +741,26 @@ async def _fetch_qrcode_result() -> dict:
 
 @router.post("/disconnect")
 async def disconnect_napcat():
-    """断开连接：停止 QQ → 恢复 package.json"""
+    """断开连接：停止 QQ → 恢复 package.json → 清空 OneBot11 配置"""
     if not _is_qq_running() and not await _check_webui_reachable():
-        # 即使未连接也尝试恢复，确保不残留 NapCat 配置
+        # 即使未连接也尝试恢复，确保不残留配置
         pkg = _get_active_pkg()
         if pkg:
             _disable_napcat(pkg)
+        _disable_onebot11_ws()
         return {"ok": True, "message": "当前未连接"}
 
     killed = await _ensure_qq_killed()
     if not killed:
         return {"ok": False, "message": f"无法关闭 QQ 进程，请手动退出\n进程路径: {_active_exe}"}
 
-    # 恢复 package.json
+    # 恢复 package.json + 清空 OneBot11 配置
     pkg = _get_active_pkg()
     if pkg:
         ok, msg = _disable_napcat(pkg)
         if not ok:
             return {"ok": False, "message": f"已断开连接，但恢复配置失败: {msg}"}
+    _disable_onebot11_ws()
 
     return {"ok": True, "message": "已断开连接"}
 
