@@ -12,7 +12,6 @@ from pathlib import Path
 
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
 
 import httpx
 
@@ -329,10 +328,6 @@ async def _ensure_qq_killed() -> bool:
 
 # ─── API 路由 ───
 
-class StartRequest(BaseModel):
-    qq_account: str = ""
-
-
 @router.get("/status")
 async def napcat_status():
     """获取消息代理状态"""
@@ -373,17 +368,13 @@ async def napcat_status():
 
 
 @router.post("/start")
-async def start_napcat(body: StartRequest | None = None):
-    """一键启动消息代理服务：杀全部 QQ → 切换模式 → 启动"""
-    qq_account = ((body and body.qq_account) or "").strip()
-    if not qq_account:
-        return {"ok": False, "message": "请填写 QQ 账号"}
-
+async def start_napcat():
+    """启动消息代理服务（不登录 QQ）：杀全部 QQ → 切换模式 → 启动 → 等待 WebUI"""
     base_url = _get_webui_base()
 
     # 已经 WebUI 可达 → 不重复操作
     if await _check_webui_reachable(base_url):
-        return {"ok": True, "message": "消息代理已在运行，WebUI 可达"}
+        return {"ok": True, "message": "消息代理已在运行"}
 
     # Step 1: 彻底杀掉所有 QQ 进程
     if _is_qq_running():
@@ -397,11 +388,10 @@ async def start_napcat(body: StartRequest | None = None):
         if not ok:
             return {"ok": False, "message": msg}
 
-    # Step 3: 启动 QQ --no-sandbox
+    # Step 3: 启动 QQ（不传 -q，不自动登录）
     try:
-        cmd = [QQ_APP_PATH, "--no-sandbox", "-q", qq_account]
         subprocess.Popen(
-            cmd,
+            [QQ_APP_PATH, "--no-sandbox"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -420,10 +410,10 @@ async def start_napcat(body: StartRequest | None = None):
 
     if not webui_ready:
         if _is_qq_running():
-            return {"ok": True, "message": "QQ 已启动，消息代理 WebUI 尚未就绪（请稍后刷新）"}
+            return {"ok": True, "message": "QQ 已启动，WebUI 尚未就绪（请稍后刷新）"}
         return {"ok": False, "message": "启动超时，QQ 进程未检测到"}
 
-    return {"ok": True, "message": "消息代理启动成功，WebUI 已就绪"}
+    return {"ok": True, "message": "消息代理启动成功，请点击「登录 QQ」扫码登录"}
 
 
 @router.post("/stop")
