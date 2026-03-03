@@ -147,14 +147,6 @@ async def list_available_models(body: ListModelsRequest):
         raise HTTPException(502, f"连接失败: {e}")
 
 
-@router.get("/{provider_id}/raw-key")
-async def get_provider_raw_key(provider_id: str):
-    """Return the unmasked API key for editing."""
-    p = config.get_provider(provider_id)
-    if not p:
-        raise HTTPException(404, "模型不存在")
-    return {"api_key": p.get("api_key", "")}
-
 
 @router.get("/{provider_id}/models")
 async def list_provider_models(provider_id: str):

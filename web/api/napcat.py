@@ -112,10 +112,34 @@ def _detect_all_qq_apps() -> list[dict]:
     return apps
 
 
-_all_qq_apps = _detect_all_qq_apps()
-_active_exe: str = _all_qq_apps[0]["exe"] if _all_qq_apps else ""
+_active_exe: str = ""
 # 记住被修改过的 package.json 的原始 main 值，断开时恢复
-_original_main: dict[str, str] = {}
+_ORIGINAL_MAIN_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "napcat_original_main.json"
+
+
+def _load_original_main() -> dict[str, str]:
+    """从磁盘加载 _original_main"""
+    try:
+        if _ORIGINAL_MAIN_FILE.exists():
+            return json.loads(_ORIGINAL_MAIN_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _save_original_main() -> None:
+    """将 _original_main 持久化到磁盘"""
+    try:
+        _ORIGINAL_MAIN_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _ORIGINAL_MAIN_FILE.write_text(
+            json.dumps(_original_main, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+
+
+_original_main: dict[str, str] = _load_original_main()
 # NoneBot2 的 WebSocket 地址（NapCat 需要连接到这里）
 _NONEBOT_WS = "ws://127.0.0.1:8080/onebot/v11/ws"
 
@@ -274,6 +298,7 @@ def _enable_napcat(pkg_path: Path) -> tuple[bool, str]:
 
     # 保存原始 main
     _original_main[str(pkg_path)] = current_main
+    _save_original_main()
 
     # 替换 main
     napcat_main = _calc_napcat_main(pkg_path, loader)
@@ -297,6 +322,7 @@ def _disable_napcat(pkg_path: Path) -> tuple[bool, str]:
     """将目标 QQ 的 package.json 恢复为正常模式"""
     key = str(pkg_path)
     original = _original_main.pop(key, None)
+    _save_original_main()
 
     try:
         data = json.loads(pkg_path.read_text(encoding="utf-8"))
@@ -529,7 +555,7 @@ async def _ensure_qq_killed() -> bool:
 
 def _get_active_pkg() -> Path | None:
     """获取当前选中 QQ 的 package.json 路径"""
-    for a in _all_qq_apps:
+    for a in _detect_all_qq_apps():
         if a["exe"] == _active_exe:
             return Path(a["package_json"])
     return None
@@ -539,6 +565,14 @@ def _get_active_pkg() -> Path | None:
 
 @router.get("/status")
 async def napcat_status():
+    global _active_exe  # noqa: PLW0603
+
+    apps = _detect_all_qq_apps()
+
+    # 如果 _active_exe 尚未设置或已失效，自动选择第一个
+    if not _active_exe or not any(a["exe"] == _active_exe for a in apps):
+        _active_exe = apps[0]["exe"] if apps else ""
+
     config = _load_webui_config()
     base_url = _get_webui_base(config)
     webui_reachable = await _check_webui_reachable(base_url)
@@ -574,7 +608,7 @@ async def napcat_status():
         "qq_running": _is_qq_running(),
         "login_error": login_error,
         "active_exe": _active_exe,
-        "apps": _all_qq_apps,
+        "apps": apps,
         "napcat_installed": _find_napcat_loader() is not None,
     }
 
@@ -590,7 +624,7 @@ async def set_active_app(body: SetAppRequest):
     if not exe:
         return {"ok": False, "message": "请选择一个 QQ 应用"}
 
-    valid = any(a["exe"] == exe for a in _all_qq_apps)
+    valid = any(a["exe"] == exe for a in _detect_all_qq_apps())
     if not valid:
         return {"ok": False, "message": f"无效的 QQ 路径: {exe}"}
 

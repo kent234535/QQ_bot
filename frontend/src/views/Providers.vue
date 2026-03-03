@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { listProviders, createProvider, updateProvider, deleteProvider, getProviderRawKey, testProviderModel, getSettings, updateSettings } from '@/api/client'
+import { ref, computed, onMounted } from 'vue'
+import { listProviders, createProvider, updateProvider, deleteProvider, testProviderModel, getSettings, updateSettings } from '@/api/client'
 
 const providers = ref<any[]>([])
 const activeProviderId = ref('')
@@ -72,10 +72,6 @@ async function startEdit(p: any) {
   }
   testResult.value = null
   testingId.value = ''
-  try {
-    const { data } = await getProviderRawKey(p.id)
-    editForm.value.api_key = data.api_key || ''
-  } catch {}
 }
 
 function cancelEdit() {
@@ -109,6 +105,10 @@ async function testModel(id: string) {
     testResult.value = { ok: false, msg: e.response?.data?.detail || '检测失败' }
   }
 }
+
+const sortedProviders = computed(() =>
+  [...providers.value].sort((a, b) => (a.id === activeProviderId.value ? -1 : b.id === activeProviderId.value ? 1 : 0))
+)
 
 onMounted(load)
 </script>
@@ -150,7 +150,7 @@ onMounted(load)
       <button class="btn btn-success" @click="save">保存</button>
     </div>
 
-    <div v-for="p in providers" :key="p.id" class="card" :style="activeProviderId === p.id ? 'border: 2px solid #a8e6cf;' : ''">
+    <div v-for="p in sortedProviders" :key="p.id" class="card" :style="activeProviderId === p.id ? 'border: 2px solid #a8e6cf;' : ''">
       <div class="flex-between">
         <div>
           <strong>{{ p.name }}</strong>
@@ -186,7 +186,7 @@ onMounted(load)
         </div>
         <div class="form-group">
           <label>API Key</label>
-          <input v-model="editForm.api_key" type="password" />
+          <input v-model="editForm.api_key" type="password" placeholder="留空则不修改" />
         </div>
         <div class="form-group">
           <div style="font-size: 0.8em; color: #888; margin-bottom: 4px;">请查阅 API 提供方的官方文档查看可用模型的完整字段</div>
