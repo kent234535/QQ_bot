@@ -110,6 +110,7 @@ onUnmounted(() => {
       </div>
 
       <div v-if="status" style="margin-top: 8px; font-size: 0.85em; color: #666;">
+        <div>NapCat QQ: <span style="font-weight: 600;">{{ status.qq_app_path || '未检测' }}</span></div>
         <div>NapCat: <span :style="{ color: status.napcat_mode ? '#2a9d8f' : '#e63946', fontWeight: 600 }">{{ status.napcat_mode ? '已启用' : '未启用' }}</span></div>
         <div>WebUI: <span :style="{ color: isRunning ? '#2a9d8f' : '#e63946' }">{{ isRunning ? '已连接' : '未连接' }}</span></div>
         <div>QQ 登录: <span :style="{ color: isLoggedIn ? '#2a9d8f' : '#e63946', fontWeight: 600 }">{{ isLoggedIn ? '已登录' : '未登录' }}</span></div>

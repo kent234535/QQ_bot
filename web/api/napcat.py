@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import glob as _glob
 import hashlib
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -18,16 +18,59 @@ import httpx
 
 router = APIRouter()
 
-# ─── 平台常量 ───
+# ─── 平台检测 ───
 
 _IS_WIN = sys.platform == "win32"
 _IS_MAC = sys.platform == "darwin"
 
+
+def _check_napcat_mode(package_json: Path) -> bool:
+    """检查某个 package.json 是否已配置 NapCat"""
+    try:
+        data = json.loads(package_json.read_text(encoding="utf-8"))
+        return "napcat" in data.get("main", "").lower()
+    except Exception:
+        return False
+
+
+def _detect_qq_app() -> tuple[str, Path]:
+    """自动检测已配置 NapCat 的 QQ 应用，返回 (可执行路径, package.json 路径)。
+    优先选择已配置 NapCat 的副本（如 QQ_小号.app），避免影响正常 QQ。"""
+    if _IS_MAC:
+        # 扫描 /Applications 下所有 QQ*.app（排除 QQBrowser 等）
+        for app_path in sorted(_glob.glob("/Applications/QQ*.app")):
+            app_name = Path(app_path).name
+            if not app_name.startswith("QQ") or "Browser" in app_name:
+                continue
+            exe = f"{app_path}/Contents/MacOS/QQ"
+            pkg = Path(f"{app_path}/Contents/Resources/app/package.json")
+            if pkg.exists() and _check_napcat_mode(pkg):
+                return exe, pkg
+        # 没找到已配置的，返回默认 QQ.app
+        return (
+            "/Applications/QQ.app/Contents/MacOS/QQ",
+            Path("/Applications/QQ.app/Contents/Resources/app/package.json"),
+        )
+    elif _IS_WIN:
+        install_dir = Path(r"C:\Program Files\Tencent\QQNT")
+        return (
+            str(install_dir / "QQ.exe"),
+            install_dir / "resources" / "app" / "package.json",
+        )
+    else:
+        return (
+            "/opt/QQ/qq",
+            Path("/opt/QQ/resources/app/package.json"),
+        )
+
+
+# 启动时自动检测
+QQ_APP_PATH, QQ_PACKAGE_JSON = _detect_qq_app()
+
+_WEBUI_CONFIG_CANDIDATES: list[Path]
+_QRCODE_IMAGE_CANDIDATES: list[Path]
+
 if _IS_WIN:
-    _QQ_INSTALL_DIR = Path(r"C:\Program Files\Tencent\QQNT")
-    QQ_APP_PATH = str(_QQ_INSTALL_DIR / "QQ.exe")
-    QQ_PACKAGE_JSON = _QQ_INSTALL_DIR / "resources" / "app" / "package.json"
-    _QQ_EXE_NAME = "QQ.exe"
     _WEBUI_CONFIG_CANDIDATES = [
         Path.home() / "AppData/Local/NapCat/config/webui.json",
         Path.home() / "AppData/Roaming/NapCat/config/webui.json",
@@ -37,9 +80,6 @@ if _IS_WIN:
         Path.home() / "AppData/Roaming/NapCat/cache/qrcode.png",
     ]
 elif _IS_MAC:
-    QQ_APP_PATH = "/Applications/QQ.app/Contents/MacOS/QQ"
-    QQ_PACKAGE_JSON = Path("/Applications/QQ.app/Contents/Resources/app/package.json")
-    _QQ_EXE_NAME = ""  # macOS 用路径匹配
     _WEBUI_CONFIG_CANDIDATES = [
         Path.home() / "Library/Application Support/QQ/NapCat/config/webui.json",
         Path.home() / "Library/Containers/com.tencent.qq/Data/Library/Application Support/QQ/NapCat/config/webui.json",
@@ -49,19 +89,12 @@ elif _IS_MAC:
         Path.home() / "Library/Containers/com.tencent.qq/Data/Library/Application Support/QQ/NapCat/cache/qrcode.png",
     ]
 else:
-    QQ_APP_PATH = "/opt/QQ/qq"
-    QQ_PACKAGE_JSON = Path("/opt/QQ/resources/app/package.json")
-    _QQ_EXE_NAME = ""
     _WEBUI_CONFIG_CANDIDATES = [
         Path.home() / ".config/NapCat/config/webui.json",
     ]
     _QRCODE_IMAGE_CANDIDATES = [
         Path.home() / ".config/NapCat/cache/qrcode.png",
     ]
-
-PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-NAPCAT_PACKAGE = PROJECT_DIR / "package.json.napcat"
-ORIGINAL_PACKAGE = PROJECT_DIR / "package.json.original"
 
 
 def _parse_bool(value: object) -> bool:
@@ -75,65 +108,8 @@ def _parse_bool(value: object) -> bool:
     return value is not None
 
 
-# ─── 工具函数 ───
-
 def _is_napcat_mode() -> bool:
-    """检查当前 QQ 的 package.json 是否已切换到 NapCat 模式"""
-    try:
-        data = json.loads(QQ_PACKAGE_JSON.read_text(encoding="utf-8"))
-        return "napcat" in data.get("main", "").lower()
-    except Exception:
-        return False
-
-
-def _switch_to_napcat() -> tuple[bool, str]:
-    """切换 QQ 到 NapCat 模式"""
-    if not NAPCAT_PACKAGE.exists():
-        return False, f"NapCat package.json 不存在: {NAPCAT_PACKAGE}"
-    try:
-        shutil.copy2(NAPCAT_PACKAGE, QQ_PACKAGE_JSON)
-        if _IS_MAC:
-            errors = _codesign_and_xattr()
-            if errors:
-                return False, f"package.json 已替换，但签名失败: {errors}"
-        return True, "已切换到 NapCat 模式"
-    except Exception as e:
-        return False, f"切换失败: {e}"
-
-
-def _switch_to_normal() -> tuple[bool, str]:
-    """切换 QQ 回普通模式"""
-    if not ORIGINAL_PACKAGE.exists():
-        return False, f"原版 package.json 不存在: {ORIGINAL_PACKAGE}"
-    try:
-        shutil.copy2(ORIGINAL_PACKAGE, QQ_PACKAGE_JSON)
-        if _IS_MAC:
-            errors = _codesign_and_xattr()
-            if errors:
-                return False, f"package.json 已恢复，但签名失败: {errors}"
-        return True, "已切换回普通模式"
-    except Exception as e:
-        return False, f"切换失败: {e}"
-
-
-def _codesign_and_xattr() -> str:
-    """macOS: 执行 codesign + xattr"""
-    if not _IS_MAC:
-        return ""
-    errors = []
-    r1 = subprocess.run(
-        ["codesign", "--force", "--deep", "--sign", "-", "/Applications/QQ.app"],
-        capture_output=True, text=True, timeout=30,
-    )
-    if r1.returncode != 0:
-        errors.append(f"codesign 退出码 {r1.returncode}: {r1.stderr.strip()}")
-    r2 = subprocess.run(
-        ["xattr", "-cr", "/Applications/QQ.app"],
-        capture_output=True, text=True, timeout=10,
-    )
-    if r2.returncode != 0:
-        errors.append(f"xattr 退出码 {r2.returncode}: {r2.stderr.strip()}")
-    return "; ".join(errors)
+    return _check_napcat_mode(QQ_PACKAGE_JSON)
 
 
 def _load_webui_config() -> dict:
@@ -255,7 +231,7 @@ def _get_qq_pids() -> list[int]:
             # wmic 精确匹配可执行路径
             result = subprocess.run(
                 ["wmic", "process", "where",
-                 f"name='{_QQ_EXE_NAME}'",
+                 f"ExecutablePath='{QQ_APP_PATH.replace(chr(92), chr(92)*2)}'",
                  "get", "ProcessId", "/format:list"],
                 capture_output=True, text=True, timeout=5,
             )
@@ -363,6 +339,7 @@ async def napcat_status():
         "qq_login": qq_login,
         "qq_offline": qq_offline,
         "login_error": login_error,
+        "qq_app_path": QQ_APP_PATH,
     }
 
 
@@ -378,17 +355,18 @@ async def start_napcat(body: StartRequest):
     if await _check_webui_reachable(base_url):
         return {"ok": True, "message": "QQ 消息代理已在运行"}
 
-    # Step 1: 杀掉目标 QQ 进程
+    # Step 1: 确认目标 QQ 已配置 NapCat
+    if not _is_napcat_mode():
+        return {
+            "ok": False,
+            "message": f"目标 QQ 未配置 NapCat 模式，请先安装 NapCat。\n检测路径: {QQ_APP_PATH}",
+        }
+
+    # Step 2: 杀掉目标 QQ 进程（仅匹配 NapCat 专用 QQ，不影响其他 QQ）
     if _is_qq_running():
         killed = await _ensure_qq_killed()
         if not killed:
             return {"ok": False, "message": "无法关闭 QQ 进程，请手动退出后重试"}
-
-    # Step 2: 切换到 NapCat 模式
-    if not _is_napcat_mode():
-        ok, msg = _switch_to_napcat()
-        if not ok:
-            return {"ok": False, "message": msg}
 
     # Step 3: 启动 QQ（不传 -q，不自动登录）
     try:
@@ -423,8 +401,7 @@ async def stop_napcat():
     if not killed:
         return {"ok": False, "message": "无法关闭 QQ 进程"}
 
-    ok, msg = _switch_to_normal()
-    return {"ok": ok, "message": f"QQ 消息代理已停止。{msg}"}
+    return {"ok": True, "message": "QQ 消息代理已停止"}
 
 
 @router.get("/qrcode")
