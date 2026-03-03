@@ -40,6 +40,9 @@ if _IS_MAC:
     _NAPCAT_LOADER_CANDIDATES = [
         Path.home() / "Library/Containers/com.tencent.qq/Data/Documents/loadNapCat.js",
         Path.home() / "Library/Application Support/QQ/loadNapCat.js",
+        Path.home() / "Library/Application Support/NapCat/loadNapCat.js",
+        Path("/opt/NapCat/loadNapCat.js"),
+        Path("/usr/local/share/NapCat/loadNapCat.js"),
     ]
 elif _IS_WIN:
     _NAPCAT_LOADER_CANDIDATES = [
@@ -132,18 +135,21 @@ def _detect_all_qq_apps() -> list[dict]:
     """扫描本机所有 QQ 应用，返回列表。"""
     apps: list[dict] = []
     if _IS_MAC:
-        for app_path in sorted(_glob.glob("/Applications/QQ*.app")):
-            name = Path(app_path).name
-            if "Browser" in name:
-                continue
-            pkg = _app_pkg(app_path)
-            if pkg.exists():
-                apps.append({
-                    "app_dir": app_path,
-                    "exe": _app_exe(app_path),
-                    "package_json": str(pkg),
-                    "name": name,
-                })
+        # 扫描系统级和用户级应用目录
+        _mac_dirs = ["/Applications", str(Path.home() / "Applications")]
+        for base_dir in _mac_dirs:
+            for app_path in sorted(_glob.glob(f"{base_dir}/QQ*.app")):
+                name = Path(app_path).name
+                if "Browser" in name:
+                    continue
+                pkg = _app_pkg(app_path)
+                if pkg.exists():
+                    apps.append({
+                        "app_dir": app_path,
+                        "exe": _app_exe(app_path),
+                        "package_json": str(pkg),
+                        "name": name,
+                    })
     elif _IS_WIN:
         _WIN_QQ_DIRS = [
             r"C:\Program Files\Tencent\QQNT",
