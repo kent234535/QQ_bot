@@ -116,15 +116,17 @@ onUnmounted(() => {
       </div>
 
       <!-- 多 App 模式：显示选择器 -->
-      <div v-if="isMultiMode && apps.length > 1" style="margin-top: 12px;">
-        <label style="font-size: 0.85em; color: #666;">NapCat QQ 应用</label>
+      <div v-if="isMultiMode" style="margin-top: 12px;">
+        <label style="font-size: 0.85em; color: #666;">选择 QQ 应用</label>
         <div class="flex gap-8 mt-10" style="flex-wrap: wrap;">
           <button v-for="app in apps" :key="app.exe"
             class="btn btn-sm"
             :class="app.exe === activeExe ? 'btn-primary' : 'btn-outline'"
-            :disabled="loading || connected"
+            :disabled="loading || connected || !app.napcat"
+            :title="app.napcat ? app.exe : '未配置 NapCat'"
             @click="doSwitchApp(app.exe)">
             {{ app.name }}
+            <span v-if="!app.napcat" style="font-size: 0.8em; opacity: 0.6;">（未配置）</span>
           </button>
         </div>
         <div v-if="connected" style="font-size: 0.8em; color: #888; margin-top: 4px;">
@@ -164,9 +166,6 @@ onUnmounted(() => {
       <div v-if="qrcode.qrcode_image_api" style="margin-top: 10px;">
         <img :src="qrcode.qrcode_image_api" alt="QQ 登录二维码"
           style="width: 220px; height: 220px; border: 1px solid #ddd; border-radius: 8px; background: #fff;" />
-        <div style="margin-top: 8px; color: #666; font-size: 0.85em;">
-          请使用手机 QQ 扫码登录，登录后状态会自动刷新
-        </div>
       </div>
     </div>
   </div>

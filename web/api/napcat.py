@@ -51,8 +51,8 @@ def _app_pkg(app_dir: str) -> Path:
     return Path(f"{app_dir}/resources/app/package.json")
 
 
-def _detect_napcat_apps() -> list[dict]:
-    """扫描本机所有已配置 NapCat 的 QQ 应用，返回列表。"""
+def _detect_all_qq_apps() -> list[dict]:
+    """扫描本机所有 QQ 应用（不论是否配置 NapCat），返回列表。"""
     apps: list[dict] = []
     if _IS_MAC:
         for app_path in sorted(_glob.glob("/Applications/QQ*.app")):
@@ -60,39 +60,53 @@ def _detect_napcat_apps() -> list[dict]:
             if "Browser" in name:
                 continue
             pkg = _app_pkg(app_path)
-            if pkg.exists() and _check_napcat_mode(pkg):
-                apps.append({
-                    "app_dir": app_path,
-                    "exe": _app_exe(app_path),
-                    "package_json": str(pkg),
-                    "name": name,
-                })
+            if not pkg.exists():
+                continue
+            napcat = _check_napcat_mode(pkg)
+            apps.append({
+                "app_dir": app_path,
+                "exe": _app_exe(app_path),
+                "package_json": str(pkg),
+                "name": name,
+                "napcat": napcat,
+            })
     elif _IS_WIN:
         for d in [r"C:\Program Files\Tencent\QQNT"]:
             pkg = _app_pkg(d)
-            if pkg.exists() and _check_napcat_mode(pkg):
-                apps.append({
-                    "app_dir": d,
-                    "exe": _app_exe(d),
-                    "package_json": str(pkg),
-                    "name": Path(d).name,
-                })
+            if not pkg.exists():
+                continue
+            napcat = _check_napcat_mode(pkg)
+            apps.append({
+                "app_dir": d,
+                "exe": _app_exe(d),
+                "package_json": str(pkg),
+                "name": Path(d).name,
+                "napcat": napcat,
+            })
     else:
         for d in ["/opt/QQ"]:
             pkg = _app_pkg(d)
-            if pkg.exists() and _check_napcat_mode(pkg):
-                apps.append({
-                    "app_dir": d,
-                    "exe": _app_exe(d),
-                    "package_json": str(pkg),
-                    "name": Path(d).name,
-                })
+            if not pkg.exists():
+                continue
+            napcat = _check_napcat_mode(pkg)
+            apps.append({
+                "app_dir": d,
+                "exe": _app_exe(d),
+                "package_json": str(pkg),
+                "name": Path(d).name,
+                "napcat": napcat,
+            })
     return apps
 
 
 # 当前使用的 QQ 路径（可通过 API 切换）
-_napcat_apps = _detect_napcat_apps()
-_active_exe: str = _napcat_apps[0]["exe"] if _napcat_apps else ""
+_all_qq_apps = _detect_all_qq_apps()
+_active_exe: str = ""
+# 默认选择第一个已配置 NapCat 的应用
+for _app in _all_qq_apps:
+    if _app["napcat"]:
+        _active_exe = _app["exe"]
+        break
 
 _WEBUI_CONFIG_CANDIDATES: list[Path]
 _QRCODE_IMAGE_CANDIDATES: list[Path]
@@ -349,8 +363,8 @@ async def napcat_status():
         "qq_running": _is_qq_running(),
         "login_error": login_error,
         "active_exe": _active_exe,
-        "apps": _napcat_apps,
-        "mode": "single" if len(_napcat_apps) <= 1 else "multi",
+        "apps": _all_qq_apps,
+        "mode": "single" if len(_all_qq_apps) <= 1 else "multi",
     }
 
 
@@ -367,7 +381,7 @@ async def set_active_app(body: SetAppRequest):
         return {"ok": False, "message": "请选择一个 QQ 应用"}
 
     # 校验是否在已检测列表中
-    valid = any(a["exe"] == exe for a in _napcat_apps)
+    valid = any(a["exe"] == exe for a in _all_qq_apps)
     if not valid:
         return {"ok": False, "message": f"无效的 QQ 路径: {exe}"}
 
@@ -411,7 +425,7 @@ async def connect_napcat():
 
     # 确认 NapCat 已配置
     pkg = None
-    for a in _napcat_apps:
+    for a in _all_qq_apps:
         if a["exe"] == _active_exe:
             pkg = Path(a["package_json"])
             break
