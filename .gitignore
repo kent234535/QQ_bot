@@ -11,8 +11,7 @@ venv/
 # Runtime data
 data/
 
-# Frontend build
-web/frontend/dist/
+# Frontend dependencies
 frontend/node_modules/
 frontend/dist/
 
