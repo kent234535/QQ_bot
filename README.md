@@ -1,80 +1,111 @@
 <p align="center">
   <h1 align="center">QQ Bot</h1>
-  <p align="center">自带控制台的 QQ AI 自动回复机器人</p>
-  <p align="center">自己的 API Key · 自己的角色人设 · 扫码即用 · 跨平台</p>
+  <p align="center"><strong>QQ AI Chatbot with Web Console</strong></p>
+  <p align="center">An AI-powered QQ auto-reply chatbot with a built-in web dashboard</p>
   <p align="center">
-    <a href="#功能特性">功能</a> ·
-    <a href="#快速开始">快速开始</a> ·
-    <a href="#web-控制台">控制台</a> ·
-    <a href="#项目结构">结构</a> ·
-    <a href="#许可证">许可证</a>
+    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10+-3776ab?logo=python&logoColor=white" alt="Python"></a>
+    <a href="https://nonebot.dev/"><img src="https://img.shields.io/badge/NoneBot2-Framework-ea5252?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiByeD0iMyIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="NoneBot2"></a>
+    <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/Vue_3-Frontend-4fc08d?logo=vuedotjs&logoColor=white" alt="Vue 3"></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-LRL-blue" alt="License"></a>
+    <img src="https://img.shields.io/badge/macOS-Recommended-brightgreen?logo=apple&logoColor=white" alt="macOS Recommended">
+  </p>
+  <p align="center">
+    <a href="#features">Features</a> ·
+    <a href="#screenshots">Screenshots</a> ·
+    <a href="#quick-start">Quick Start</a> ·
+    <a href="#web-console">Console</a> ·
+    <a href="#license">License</a>
+  </p>
+  <p align="center">
+    <a href="./README.md"><img src="https://img.shields.io/badge/🌐_English-4361ee?style=for-the-badge" alt="English"></a>&nbsp;
+    <a href="./README_zh.md"><img src="https://img.shields.io/badge/🇨🇳_简体中文-gray?style=for-the-badge" alt="简体中文"></a>
   </p>
 </p>
 
+> A **QQ AI chatbot** powered by DeepSeek, Claude, Qwen, or any OpenAI-compatible LLM. Features a built-in **web console** for configuration, **custom AI personas**, and **QR code login**. Works on **macOS** and **Windows**.
+
+> [!NOTE]
+> **Recommended platform: macOS.** The current release is most stable on macOS. Windows support is available but still being improved.
+
 ---
 
-## 功能特性
+## Features
 
-- **自带 Web 控制台** — 浏览器里完成所有配置，不用编辑任何文件
-- **自己配 API Key** — 支持 DeepSeek、阿里云百炼、OpenRouter、Claude 等任意平台，用自己的额度
-- **自定义角色性格** — 内置猫娘 / 助手 / 程序员，也能随手创建自己的角色
-- **扫码换号** — 控制台一键连接，扫码登录，随时切换 QQ 账号
-- **上下文对话** — 自动回复私聊消息，记住最近对话内容
-- **跨平台** — macOS 和 Windows 均可运行
+- **Built-in Web Console** — Configure everything in the browser, no config files to edit
+- **Bring Your Own API Key** — Supports DeepSeek, Alibaba Cloud (Qwen), OpenRouter, Anthropic Claude, and any OpenAI-compatible provider
+- **Custom AI Personas** — Ships with cat-girl / assistant / programmer presets, or create your own with custom System Prompts
+- **QR Code Login** — One-click NapCat connection, scan to log in, switch QQ accounts anytime
+- **Multi-QQ App Detection** — Automatically detects all QQ installations on your machine (e.g. QQ.app, QQ_alt.app) and lets you switch between them in the console
+- **Context-Aware Chat** — Auto-reply to private messages with conversation memory
+- **Cross-Platform** — Runs on both macOS and Windows (macOS recommended for best stability)
 
-## 快速开始
+---
 
-> 请先确保已安装 [QQ 桌面版（QQNT）](https://im.qq.com) 和 [NapCat](https://github.com/NapNeko/NapCatQQ)。
+## Screenshots
 
-**选择你的操作系统：**
+| Persona Management | Model Configuration |
+|:---:|:---:|
+| ![Personas](image/主界面(角色).png) | ![Models](image/模型界面.png) |
 
-<a href="#macos-部署">
-  <img src="https://img.shields.io/badge/macOS-部署教程-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS">
+| Connection Management | Settings |
+|:---:|:---:|
+| ![Connection](image/连接界面.png) | ![Settings](image/设置界面.png) |
+
+---
+
+## Quick Start
+
+> Prerequisites: [QQ Desktop (QQNT)](https://im.qq.com) and [NapCat](https://github.com/NapNeko/NapCatQQ) must be installed first.
+
+**Choose your operating system:**
+
+<a href="#macos-setup">
+  <img src="https://img.shields.io/badge/macOS-Setup_Guide_(Recommended)-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS">
 </a>
 &nbsp;&nbsp;
-<a href="#windows-部署">
-  <img src="https://img.shields.io/badge/Windows-部署教程-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows">
+<a href="#windows-setup">
+  <img src="https://img.shields.io/badge/Windows-Setup_Guide-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows">
 </a>
 
 ---
 
-### macOS 部署
+### macOS Setup
 
-#### 1. 安装基础工具
+#### 1. Install Prerequisites
 
 ```bash
-# 安装 Xcode Command Line Tools（包含 Git）
+# Install Xcode Command Line Tools (includes Git)
 xcode-select --install
 
-# 安装 Homebrew（macOS 包管理器）
+# Install Homebrew (macOS package manager)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# 安装 Python
+# Install Python
 brew install python@3.12
 
-# 验证
-python3 --version   # 应输出 Python 3.12.x 或更高
+# Verify
+python3 --version   # Should output Python 3.12.x or higher
 ```
 
-#### 2. 安装 NapCat
+#### 2. Install NapCat
 
-前往 [NapCat-Mac-Installer Releases](https://github.com/NapNeko/NapCat-Mac-Installer/releases) 下载最新版 `.dmg` 安装器，打开并按提示完成安装。
+Download the latest `.dmg` installer from [NapCat-Mac-Installer Releases](https://github.com/NapNeko/NapCat-Mac-Installer/releases) and follow the prompts.
 
-> **备选**：也可使用命令行安装：
+> **Alternative** — command-line installation:
 > ```bash
 > curl -o napcat.sh https://nclatest.znin.net/NapNeko/NapCat-Installer/main/script/install.sh
 > sudo bash napcat.sh --tui
 > ```
 
-验证安装：
+Verify installation:
 
 ```bash
 ls ~/Library/Containers/com.tencent.qq/Data/Documents/loadNapCat.js 2>/dev/null \
   || ls ~/Library/Application\ Support/QQ/loadNapCat.js 2>/dev/null \
-  && echo "NapCat 已安装" || echo "未找到 NapCat"
+  && echo "NapCat installed" || echo "NapCat not found"
 ```
 
-#### 3. 部署项目
+#### 3. Deploy
 
 ```bash
 cd ~/Desktop
@@ -86,7 +117,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-#### 4. 启动
+#### 4. Run
 
 ```bash
 cd ~/Desktop/QQ_bot
@@ -94,44 +125,44 @@ source venv/bin/activate
 python bot.py
 ```
 
-打开浏览器访问 **http://127.0.0.1:8080/web/** ，在控制台中配置 AI 模型、选择角色、点击连接扫码登录即可。
+Open **http://127.0.0.1:8080/web/** in your browser. Configure an AI model, pick a persona, click Connect and scan the QR code to log in.
 
 ---
 
-### Windows 部署
+### Windows Setup
 
-#### 1. 安装 Git
+#### 1. Install Git
 
-前往 https://git-scm.com/download/win 下载安装，全部默认选项。安装后在开始菜单搜索 **Git Bash** 打开。
+Download from https://git-scm.com/download/win and install with default options. Open **Git Bash** from the Start menu.
 
-> 后续所有命令均在 **Git Bash** 中执行。
+> All commands below should be run in **Git Bash**.
 
-#### 2. 安装 Python
+#### 2. Install Python
 
 ```bash
-# 在 Git Bash 中用 winget 安装（Windows 10 1709+ 自带）
+# Install via winget (built into Windows 10 1709+)
 winget install Python.Python.3.12
 
-# 安装后重新打开 Git Bash，验证
-python --version   # 应输出 Python 3.12.x 或更高
+# Reopen Git Bash after install, then verify
+python --version   # Should output Python 3.12.x or higher
 ```
 
-> 如果 `winget` 不可用，前往 https://www.python.org/downloads/ 下载安装，**务必勾选 "Add Python to PATH"**。
+> If `winget` is not available, download from https://www.python.org/downloads/ — **make sure to check "Add Python to PATH"**.
 
-#### 3. 安装 NapCat
+#### 3. Install NapCat
 
-在 **PowerShell（管理员）** 中执行：
+Run in **PowerShell (Administrator)**:
 
 ```powershell
 curl -o install.ps1 https://nclatest.znin.net/NapNeko/NapCat-Installer/main/script/install.ps1
 powershell -ExecutionPolicy ByPass -File ./install.ps1 -verb runas
 ```
 
-> Windows 10 如果失败，前往 [NapCat-Installer Releases](https://github.com/NapNeko/NapCat-Installer/releases) 手动下载。
+> If this fails on Windows 10, download manually from [NapCat-Installer Releases](https://github.com/NapNeko/NapCat-Installer/releases).
 
-#### 4. 部署项目
+#### 4. Deploy
 
-回到 **Git Bash**：
+Back in **Git Bash**:
 
 ```bash
 cd ~/Desktop
@@ -143,9 +174,9 @@ source venv/Scripts/activate
 python -m pip install -r requirements.txt
 ```
 
-#### 5. 启动
+#### 5. Run
 
-**命令行**：
+**Command line**:
 
 ```bash
 cd ~/Desktop/QQ_bot
@@ -153,151 +184,165 @@ source venv/Scripts/activate
 python bot.py
 ```
 
-**或双击** 项目根目录下的 `run.bat`。
+**Or double-click** `run.bat` in the project root.
 
-打开浏览器访问 **http://127.0.0.1:8080/web/** ，在控制台中配置 AI 模型、选择角色、点击连接扫码登录即可。
+Open **http://127.0.0.1:8080/web/** in your browser. Configure an AI model, pick a persona, click Connect and scan the QR code to log in.
 
-> 如果连接时提示权限错误，请以管理员身份运行。
+> If you see permission errors when connecting, run as Administrator.
 
 ---
 
-## Web 控制台
+## Web Console
 
-启动后访问 `http://127.0.0.1:8080/web/`，左侧菜单包含四个页面：
+Visit `http://127.0.0.1:8080/web/` after startup. The sidebar has four pages:
 
-### 模型配置
+### Model Configuration
 
-添加你自己的 AI API Key，支持以下平台：
+Add your own AI API keys. Supported providers:
 
-| 平台 | 类型 | Base URL | 模型示例 |
-|------|------|----------|----------|
-| DeepSeek | OpenAI 兼容 | `https://api.deepseek.com/v1` | `deepseek-chat` |
-| 阿里云百炼 | OpenAI 兼容 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
-| OpenRouter | OpenAI 兼容 | `https://openrouter.ai/api/v1` | `meta-llama/llama-3-70b` |
+| Provider | Type | Base URL | Model Example |
+|----------|------|----------|---------------|
+| DeepSeek | OpenAI Compatible | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| Alibaba Cloud | OpenAI Compatible | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| OpenRouter | OpenAI Compatible | `https://openrouter.ai/api/v1` | `meta-llama/llama-3-70b` |
 | Anthropic | Claude | `https://api.anthropic.com` | `claude-sonnet-4-20250514` |
 
-> API Key 需到对应平台官网注册申请，大部分平台提供免费额度。
+> You need to register and obtain API keys from each provider. Most offer free credits.
 
-### 角色管理
+### Persona Management
 
-内置猫娘、智能助手、程序员三个角色。支持自定义角色，编写你自己的 System Prompt 来定义 AI 的性格和行为。
+Comes with three built-in personas: cat-girl, smart assistant, and programmer. Create custom personas by writing your own System Prompt to define AI personality and behavior.
 
-### 连接管理
+### Connection Management
 
-检测到多个 QQ 应用时可切换。点击连接后扫码登录，随时可断开并切换到其他 QQ 号。
+The console **automatically detects all QQ installations** on your machine. If you have multiple QQ apps (e.g. for different accounts), they will all appear as selectable options — just pick one and click Connect.
 
-### 参数设置
+Connect, scan the QR code, and disconnect or switch accounts at any time.
 
-| 参数 | 说明 | 默认值 |
-|------|------|--------|
-| 每用户最大交互次数 | 每个用户每次重启前最多聊多少轮 | 20 |
-| 单次最大 Token 数 | AI 单次回复的最大长度 | 2000 |
-| 生成温度 | 越高越随机，越低越稳定 | 0.8 |
-| API 超时 | 等待 AI 回复的最大秒数 | 20 |
-| 消息冷却时间 | 同一用户两次发消息的最短间隔（秒） | 5 |
-| 最大上下文消息数 | AI 记住最近多少条对话 | 20 |
+### Settings
 
----
-
-## 日常使用
-
-配置完成后，用**另一个 QQ 号**给机器人 QQ 发私聊消息即可收到 AI 回复。
-
-每次使用只需启动程序并在控制台点击连接。按 `Ctrl + C` 停止。
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| Max interactions per user | Max conversation rounds per user per session | 20 |
+| Max tokens | Max AI response length per message | 2000 |
+| Temperature | Higher = more random, lower = more deterministic | 0.8 |
+| API timeout | Max seconds to wait for AI response | 20 |
+| Cooldown | Min seconds between messages from same user | 5 |
+| Max context messages | How many recent messages AI remembers | 20 |
 
 ---
 
-## 技术栈
+## Daily Usage
 
-| 层 | 技术 |
-|---|------|
-| 后端框架 | NoneBot2 + FastAPI |
-| 协议适配 | OneBot V11（NapCat 反向 WebSocket） |
-| AI 接入 | OpenAI 兼容 API / Anthropic Claude API |
-| 前端 | Vue 3 + TypeScript + Vite |
-| 数据持久化 | JSON 文件（Pydantic 模型校验） |
+After setup, send a private message to the bot's QQ account **from a different QQ account** to receive AI replies.
 
-## 项目结构
+Each session: just start the program and click Connect in the console. Press `Ctrl + C` to stop.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | NoneBot2 + FastAPI |
+| Protocol | OneBot V11 (NapCat Reverse WebSocket) |
+| AI Integration | OpenAI-compatible API / Anthropic Claude API |
+| Frontend | Vue 3 + TypeScript + Vite |
+| Persistence | JSON files (Pydantic model validation) |
+
+## Project Structure
 
 ```
 QQ_bot/
-├── bot.py                      # NoneBot2 入口
-├── .env                        # 框架配置（HOST / PORT / 日志级别）
-├── requirements.txt            # Python 依赖
-├── run.sh                      # macOS / Linux 启动脚本
-├── run.bat                     # Windows 启动脚本
-├── config/                     # 配置系统
-│   ├── __init__.py             #   配置加载器（单例模式）
-│   ├── settings.py             #   Pydantic 设置模型
-│   └── defaults.py             #   默认值与内置角色预设
-├── providers/                  # AI 提供商适配器
-│   ├── base.py                 #   抽象基类 AIProvider
-│   ├── openai_compat.py        #   OpenAI 兼容适配器
-│   └── claude.py               #   Anthropic Claude 适配器
+├── bot.py                      # NoneBot2 entry point
+├── .env                        # Framework config (HOST / PORT / log level)
+├── requirements.txt            # Python dependencies
+├── run.sh                      # macOS / Linux start script
+├── run.bat                     # Windows start script
+├── config/                     # Configuration system
+│   ├── __init__.py             #   Config loader (singleton)
+│   ├── settings.py             #   Pydantic settings model
+│   └── defaults.py             #   Defaults & built-in persona presets
+├── providers/                  # AI provider adapters
+│   ├── base.py                 #   Abstract base class AIProvider
+│   ├── openai_compat.py        #   OpenAI-compatible adapter
+│   └── claude.py               #   Anthropic Claude adapter
 ├── plugins/
-│   └── ai_chat.py              # 核心聊天插件
-├── web/                        # Web 控制台后端
-│   ├── __init__.py             #   挂载 API + 静态文件到 FastAPI
-│   ├── api/                    #   REST API 路由
-│   └── frontend/dist/          #   Vue 3 前端构建产物
-├── frontend/                   # Vue 3 前端源码
-└── data/                       # 运行时数据（自动生成，不纳入版本控制）
+│   └── ai_chat.py              # Core chat plugin
+├── web/                        # Web console backend
+│   ├── __init__.py             #   Mount API + static files to FastAPI
+│   ├── api/                    #   REST API routes
+│   └── frontend/dist/          #   Vue 3 frontend build output
+├── frontend/                   # Vue 3 frontend source
+└── data/                       # Runtime data (auto-generated, gitignored)
 ```
 
-## 前端开发
+## Frontend Development
 
 ```bash
 cd frontend
 npm install
-npm run dev      # 开发模式，API 代理到 :8080
-npm run build    # 构建到 web/frontend/dist/
+npm run dev      # Dev mode, API proxied to :8080
+npm run build    # Build to web/frontend/dist/
 ```
 
 ---
 
-## 致谢
+## Security
 
-- **[NoneBot2](https://github.com/nonebot/nonebot2)** — 跨平台 Python 异步机器人框架
-- **[NapCatQQ](https://github.com/NapNeko/NapCatQQ)** — 现代化的基于 NTQQ 的 Bot 协议端实现
-- **[Vue.js](https://github.com/vuejs/core)** — 渐进式 JavaScript 框架
-- **[Vite](https://github.com/vitejs/vite)** — 下一代前端构建工具
-- **[FastAPI](https://github.com/fastapi/fastapi)** — 现代、高性能的 Python Web 框架
-- **[Pydantic](https://github.com/pydantic/pydantic)** — 数据验证与设置管理
+To avoid credential leaks:
 
-## 相关项目
-
-| 项目 | 说明 |
-|------|------|
-| [NapCatQQ](https://github.com/NapNeko/NapCatQQ) | QQ 协议端实现 |
-| [NapCat-Installer](https://github.com/NapNeko/NapCat-Installer) | NapCat 跨平台安装脚本 |
-| [NapCat-Mac-Installer](https://github.com/NapNeko/NapCat-Mac-Installer) | NapCat macOS 安装器 |
-| [NoneBot2 文档](https://nonebot.dev/) | NoneBot2 官方文档 |
-| [OneBot V11 标准](https://github.com/botuniverse/onebot-11) | OneBot V11 协议规范 |
+1. **Never commit `.env` or `data/`** — API keys are stored in `data/providers.json`.
+2. **API is local-only by default** — Remote access to `/api/*` is rejected unless explicitly enabled.
+3. **For remote access** — Set `ALLOW_REMOTE_WEB=1` and configure authentication in your reverse proxy (Basic Auth / OAuth / IP whitelist).
+4. **Pre-publish check** — Run `git status --short` to ensure no `data/*.json`, `.env`, or key files are staged.
+5. **Key rotation** — If you ever committed an API key in history, rotate it immediately on the provider's dashboard.
 
 ---
 
-## 许可证
+## Acknowledgements
 
-本项目采用 [Limited Redistribution License](./LICENSE)。
+- **[NoneBot2](https://github.com/nonebot/nonebot2)** — Cross-platform Python async bot framework
+- **[NapCatQQ](https://github.com/NapNeko/NapCatQQ)** — Modern NTQQ-based bot protocol implementation
+- **[Vue.js](https://github.com/vuejs/core)** — Progressive JavaScript framework
+- **[Vite](https://github.com/vitejs/vite)** — Next-generation frontend build tool
+- **[FastAPI](https://github.com/fastapi/fastapi)** — Modern, high-performance Python web framework
+- **[Pydantic](https://github.com/pydantic/pydantic)** — Data validation and settings management
 
-- 禁止商业用途
-- 允许在保留许可证和版权信息的前提下再分发
-- 修改后的代码不得公开发布
+## Related Projects
 
-详见 [LICENSE](./LICENSE)。
+| Project | Description |
+|---------|-------------|
+| [NapCatQQ](https://github.com/NapNeko/NapCatQQ) | QQ protocol implementation |
+| [NapCat-Installer](https://github.com/NapNeko/NapCat-Installer) | NapCat cross-platform installer |
+| [NapCat-Mac-Installer](https://github.com/NapNeko/NapCat-Mac-Installer) | NapCat macOS installer |
+| [NoneBot2 Docs](https://nonebot.dev/) | NoneBot2 official documentation |
+| [OneBot V11](https://github.com/botuniverse/onebot-11) | OneBot V11 protocol specification |
 
-## 免责声明
+---
 
-**使用本项目前，请务必阅读以下内容：**
+## License
 
-1. **本项目仅供学习和个人使用**，不得用于商业用途或任何违反法律法规的场景。
+This project is licensed under the [Limited Redistribution License](./LICENSE).
 
-2. **本项目依赖 [NapCatQQ](https://github.com/NapNeko/NapCatQQ) 实现 QQ 协议对接。** NapCat 通过修改 QQ 客户端实现功能，这可能违反腾讯 QQ 用户协议。使用本项目可能导致 QQ 账号被限制或封禁。
+- Commercial use is prohibited
+- Redistribution is allowed with license and copyright notice retained
+- Modified code may not be publicly distributed
 
-3. **作者不对因使用本项目而产生的任何直接或间接损失承担责任**，包括但不限于账号封禁、数据丢失、财产损失等。
+See [LICENSE](./LICENSE) for details.
 
-4. **请勿在其他社区（包括其他协议端项目或相关应用项目的社区）中提及本项目**，以避免不必要的争议。如有建议，请通过 GitHub Issue 反馈。
+## Disclaimer
 
-5. **用户应自行遵守所在地区的法律法规。** 因滥用本项目而产生的一切问题，由使用者自行承担全部责任。
+**Please read the following before using this project:**
 
-**下载、安装或使用本项目即表示您已阅读并同意上述声明。**
+1. **This project is for learning and personal use only.** It must not be used for commercial purposes or any activity that violates applicable laws.
+
+2. **This project relies on [NapCatQQ](https://github.com/NapNeko/NapCatQQ) for QQ protocol integration.** NapCat works by modifying the QQ client, which may violate Tencent's QQ Terms of Service. Using this project may result in QQ account restrictions or bans.
+
+3. **The author assumes no liability for any direct or indirect damages** arising from the use of this project, including but not limited to account bans, data loss, or financial loss.
+
+4. **Please do not mention this project in other communities** (including other protocol or bot project communities) to avoid unnecessary disputes. For suggestions, please use GitHub Issues.
+
+5. **Users must comply with the laws and regulations of their jurisdiction.** All consequences arising from misuse of this project are the sole responsibility of the user.
+
+**By downloading, installing, or using this project, you acknowledge that you have read and agreed to the above statement.**
