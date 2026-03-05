@@ -78,7 +78,8 @@ onMounted(load)
       </button>
     </div>
 
-    <div v-if="showForm" class="card">
+    <!-- 添加表单 -->
+    <div v-if="showForm" class="card form-card">
       <div class="form-group">
         <label>名称</label>
         <input v-model="form.name" placeholder="如 傲娇少女" />
@@ -90,20 +91,23 @@ onMounted(load)
       <button class="btn btn-success" @click="save">保存</button>
     </div>
 
-    <div v-for="p in sortedPersonas" :key="p.id" class="card" :style="activePersonaId === p.id ? 'border: 2px solid #a8e6cf;' : ''">
+    <!-- 角色卡片列表 -->
+    <div v-for="p in sortedPersonas" :key="p.id" class="card persona-card"
+      :class="{ 'card-active': activePersonaId === p.id }">
       <div class="flex-between">
-        <div>
+        <div class="persona-info">
           <strong>{{ p.name }}</strong>
-          <span v-if="activePersonaId === p.id" class="badge badge-green" style="margin-left: 8px;">当前启用</span>
+          <span v-if="activePersonaId === p.id" class="badge badge-green">当前启用</span>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div class="btn-group">
           <button v-if="activePersonaId !== p.id" class="btn btn-success btn-sm" @click="activate(p.id)">启用</button>
           <button class="btn btn-primary btn-sm" @click="startEdit(p)">编辑</button>
           <button class="btn btn-danger btn-sm" @click="remove(p.id)">删除</button>
         </div>
       </div>
 
-      <div v-if="editingId === p.id" style="margin-top: 12px; border-top: 1px dashed #ddd; padding-top: 10px;">
+      <!-- 编辑面板 -->
+      <div v-if="editingId === p.id" class="edit-panel">
         <div class="form-group">
           <label>名称</label>
           <input v-model="editForm.name" />
@@ -112,13 +116,60 @@ onMounted(load)
           <label>角色描述</label>
           <textarea v-model="editForm.system_prompt" rows="4"></textarea>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div class="btn-group">
           <button class="btn btn-success btn-sm" @click="saveEdit(p.id)">保存修改</button>
-          <button class="btn btn-primary btn-sm" @click="cancelEdit">取消</button>
+          <button class="btn btn-outline btn-sm" @click="cancelEdit">取消</button>
         </div>
       </div>
 
-      <div v-else style="margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 0.85em; white-space: pre-wrap;">{{ p.system_prompt }}</div>
+      <!-- 预览 -->
+      <div v-else class="prompt-preview">{{ p.system_prompt }}</div>
+    </div>
+
+    <div v-if="!personas.length" class="card empty-card">
+      暂无角色，点击上方按钮添加
     </div>
   </div>
 </template>
+
+<style scoped>
+.form-card {
+  border: 1px dashed var(--primary);
+  background: var(--primary-light);
+}
+.persona-card.card-active {
+  border-color: var(--success);
+  border-width: 2px;
+}
+.persona-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-group {
+  display: flex;
+  gap: 6px;
+}
+.edit-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gray-200);
+}
+.prompt-preview {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  font-size: 0.85em;
+  color: var(--gray-700);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  border: 1px solid var(--gray-200);
+}
+.empty-card {
+  color: var(--gray-400);
+  text-align: center;
+  padding: 40px;
+}
+</style>

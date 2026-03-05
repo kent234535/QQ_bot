@@ -14,7 +14,6 @@ const form = ref({
   enabled: true,
 })
 
-// 编辑表单
 const editingId = ref('')
 const editForm = ref({
   name: '',
@@ -25,7 +24,6 @@ const editForm = ref({
 })
 const savingEdit = ref(false)
 
-// 检测模型
 const testingId = ref('')
 const testResult = ref<{ ok: boolean; msg: string } | null>(null)
 
@@ -122,95 +120,166 @@ onMounted(load)
       </button>
     </div>
 
-    <div v-if="showForm" class="card">
+    <!-- 添加表单 -->
+    <div v-if="showForm" class="card form-card">
       <div class="form-group">
         <label>名称</label>
         <input v-model="form.name" placeholder="如 DeepSeek" />
       </div>
-      <div class="form-group">
-        <label>类型</label>
-        <select v-model="form.type">
-          <option value="openai_compat">OpenAI 兼容</option>
-          <option value="claude">Anthropic Claude</option>
-        </select>
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label>类型</label>
+          <select v-model="form.type">
+            <option value="openai_compat">OpenAI 兼容</option>
+            <option value="claude">Anthropic Claude</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex: 2;">
+          <label>Base URL</label>
+          <input v-model="form.base_url" placeholder="https://api.deepseek.com/v1" />
+        </div>
       </div>
-      <div class="form-group">
-        <label>Base URL</label>
-        <input v-model="form.base_url" placeholder="https://api.deepseek.com/v1" />
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label>API Key</label>
+          <input v-model="form.api_key" type="password" placeholder="sk-..." />
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label>模型</label>
+          <input v-model="form.model" placeholder="如 deepseek-chat" />
+        </div>
       </div>
-      <div class="form-group">
-        <label>API Key</label>
-        <input v-model="form.api_key" type="password" placeholder="sk-..." />
-      </div>
-      <div class="form-group">
-        <div style="font-size: 0.8em; color: #888; margin-bottom: 4px;">请查阅 API 提供方的官方文档查看可用模型的完整字段</div>
-        <label>模型</label>
-        <input v-model="form.model" placeholder="如 deepseek-chat" />
-      </div>
+      <div class="form-hint">请查阅 API 提供方的官方文档查看可用模型名称</div>
       <button class="btn btn-success" @click="save">保存</button>
     </div>
 
-    <div v-for="p in sortedProviders" :key="p.id" class="card" :style="activeProviderId === p.id ? 'border: 2px solid #a8e6cf;' : ''">
+    <!-- 模型卡片列表 -->
+    <div v-for="p in sortedProviders" :key="p.id" class="card provider-card"
+      :class="{ 'card-active': activeProviderId === p.id }">
       <div class="flex-between">
-        <div>
+        <div class="provider-info">
           <strong>{{ p.name }}</strong>
-          <span v-if="activeProviderId === p.id" class="badge badge-green" style="margin-left: 8px;">当前启用</span>
-          <span class="badge badge-gray" style="margin-left: 4px;">{{ p.type }}</span>
+          <span v-if="activeProviderId === p.id" class="badge badge-green">当前启用</span>
+          <span class="badge badge-gray">{{ p.type === 'claude' ? 'Claude' : 'OpenAI' }}</span>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div class="btn-group">
           <button v-if="activeProviderId !== p.id" class="btn btn-success btn-sm" @click="activate(p.id)">启用</button>
           <button class="btn btn-primary btn-sm" @click="startEdit(p)">编辑</button>
           <button class="btn btn-danger btn-sm" @click="remove(p.id)">删除</button>
         </div>
       </div>
-      <div style="margin-top: 8px; font-size: 0.85em; color: #666;">
-        模型: {{ p.model || '未设置' }} &nbsp;|&nbsp;
-        API Key: {{ p.api_key || '未设置' }}
+      <div class="provider-meta">
+        <span>模型: {{ p.model || '未设置' }}</span>
+        <span>API Key: {{ p.api_key || '未设置' }}</span>
       </div>
 
-      <div v-if="editingId === p.id" style="margin-top: 12px; border-top: 1px dashed #ddd; padding-top: 10px;">
+      <!-- 编辑面板 -->
+      <div v-if="editingId === p.id" class="edit-panel">
         <div class="form-group">
           <label>名称</label>
           <input v-model="editForm.name" />
         </div>
-        <div class="form-group">
-          <label>类型</label>
-          <select v-model="editForm.type">
-            <option value="openai_compat">OpenAI 兼容</option>
-            <option value="claude">Anthropic Claude</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Base URL</label>
-          <input v-model="editForm.base_url" />
+        <div class="form-row">
+          <div class="form-group" style="flex: 1;">
+            <label>类型</label>
+            <select v-model="editForm.type">
+              <option value="openai_compat">OpenAI 兼容</option>
+              <option value="claude">Anthropic Claude</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label>Base URL</label>
+            <input v-model="editForm.base_url" />
+          </div>
         </div>
         <div class="form-group">
           <label>API Key</label>
           <input v-model="editForm.api_key" type="password" placeholder="留空则不修改" />
         </div>
         <div class="form-group">
-          <div style="font-size: 0.8em; color: #888; margin-bottom: 4px;">请查阅 API 提供方的官方文档查看可用模型的完整字段</div>
           <label>模型</label>
-          <div style="display: flex; gap: 8px;">
-            <input v-model="editForm.model" placeholder="如 deepseek-chat" style="flex: 1;" />
+          <div class="model-row">
+            <input v-model="editForm.model" placeholder="如 deepseek-chat" />
             <button class="btn btn-primary btn-sm" :disabled="testingId === p.id && !testResult" @click="testModel(p.id)">
-              {{ testingId === p.id && !testResult ? '检测中...' : '检测模型可用性' }}
+              {{ testingId === p.id && !testResult ? '检测中...' : '检测可用性' }}
             </button>
           </div>
-          <div v-if="testingId === p.id && testResult" style="margin-top: 6px; font-size: 0.85em; font-weight: 600;"
-            :style="{ color: testResult.ok ? '#2a9d8f' : '#e63946' }">
+          <div v-if="testingId === p.id && testResult" class="test-result"
+            :class="testResult.ok ? 'test-ok' : 'test-fail'">
             {{ testResult.msg }}
           </div>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div class="btn-group">
           <button class="btn btn-success btn-sm" :disabled="savingEdit" @click="saveEditForm(p.id)">保存修改</button>
-          <button class="btn btn-primary btn-sm" :disabled="savingEdit" @click="cancelEdit">取消</button>
+          <button class="btn btn-outline btn-sm" :disabled="savingEdit" @click="cancelEdit">取消</button>
         </div>
       </div>
     </div>
 
-    <div v-if="!providers.length" class="card" style="color: #888; text-align: center;">
+    <div v-if="!providers.length" class="card empty-card">
       暂无模型，点击上方按钮添加
     </div>
   </div>
 </template>
+
+<style scoped>
+.form-card {
+  border: 1px dashed var(--primary);
+  background: var(--primary-light);
+}
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+.form-hint {
+  font-size: 0.8em;
+  color: var(--gray-400);
+  margin-bottom: 14px;
+}
+.provider-card.card-active {
+  border-color: var(--success);
+  border-width: 2px;
+}
+.provider-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-group {
+  display: flex;
+  gap: 6px;
+}
+.provider-meta {
+  margin-top: 10px;
+  font-size: 0.83em;
+  color: var(--gray-500);
+  display: flex;
+  gap: 16px;
+}
+.edit-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gray-200);
+}
+.model-row {
+  display: flex;
+  gap: 8px;
+}
+.model-row input { flex: 1; }
+.test-result {
+  margin-top: 6px;
+  font-size: 0.83em;
+  font-weight: 600;
+}
+.test-ok { color: var(--success); }
+.test-fail { color: var(--danger); }
+.empty-card {
+  color: var(--gray-400);
+  text-align: center;
+  padding: 40px;
+}
+@media (max-width: 768px) {
+  .form-row { flex-direction: column; gap: 0; }
+}
+</style>
