@@ -1,6 +1,7 @@
 <p align="center">
   <h1 align="center">QQ Bot</h1>
-  <p align="center">基于 NoneBot2 + NapCat 的 QQ AI 聊天机器人</p>
+  <p align="center">自带控制台的 QQ AI 自动回复机器人</p>
+  <p align="center">自己的 API Key · 自己的角色人设 · 扫码即用 · 跨平台</p>
   <p align="center">
     <a href="#功能特性">功能</a> ·
     <a href="#快速开始">快速开始</a> ·
@@ -14,39 +15,30 @@
 
 ## 功能特性
 
-- **私聊 AI 对话** — 自动回复私聊消息，支持上下文连续对话
-- **多平台 AI 支持** — OpenAI 兼容 API（阿里云百炼、DeepSeek、OpenRouter、SiliconFlow 等）及 Anthropic Claude
-- **多角色切换** — 内置猫娘、智能助手、程序员角色，支持自定义
-- **Web 控制台** — 浏览器管理所有配置，无需手动编辑文件
-- **一键连接** — Web 端启动 NapCat、扫码登录 QQ，全程可视化
-- **跨平台** — 支持 macOS 和 Windows
-
-## 技术栈
-
-| 层 | 技术 |
-|---|------|
-| 后端框架 | NoneBot2 + FastAPI |
-| 协议适配 | OneBot V11（NapCat 反向 WebSocket） |
-| AI 接入 | OpenAI 兼容 API / Anthropic Claude API |
-| 前端 | Vue 3 + TypeScript + Vite |
-| 数据持久化 | JSON 文件（Pydantic 模型校验） |
-
-## 前置要求
-
-| 依赖 | 版本要求 | 说明 |
-|------|---------|------|
-| Python | >= 3.10 | 运行后端 |
-| Git | 任意 | 拉取代码 |
-| QQ 桌面版 | QQNT 架构 | [下载地址](https://im.qq.com) |
-| NapCat | 最新版 | QQ 协议端，见下方安装说明 |
-
----
+- **自带 Web 控制台** — 浏览器里完成所有配置，不用编辑任何文件
+- **自己配 API Key** — 支持 DeepSeek、阿里云百炼、OpenRouter、Claude 等任意平台，用自己的额度
+- **自定义角色性格** — 内置猫娘 / 助手 / 程序员，也能随手创建自己的角色
+- **扫码换号** — 控制台一键连接，扫码登录，随时切换 QQ 账号
+- **上下文对话** — 自动回复私聊消息，记住最近对话内容
+- **跨平台** — macOS 和 Windows 均可运行
 
 ## 快速开始
 
-> 以下步骤假设你的电脑上尚未安装任何依赖。请根据操作系统选择对应章节。
+> 请先确保已安装 [QQ 桌面版（QQNT）](https://im.qq.com) 和 [NapCat](https://github.com/NapNeko/NapCatQQ)。
 
-### macOS
+**选择你的操作系统：**
+
+<a href="#macos-部署">
+  <img src="https://img.shields.io/badge/macOS-部署教程-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS">
+</a>
+&nbsp;&nbsp;
+<a href="#windows-部署">
+  <img src="https://img.shields.io/badge/Windows-部署教程-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Windows">
+</a>
+
+---
+
+### macOS 部署
 
 #### 1. 安装基础工具
 
@@ -54,71 +46,47 @@
 # 安装 Xcode Command Line Tools（包含 Git）
 xcode-select --install
 
-# 安装 Homebrew
+# 安装 Homebrew（macOS 包管理器）
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# 安装 Python 3.12
+# 安装 Python
 brew install python@3.12
 
 # 验证
 python3 --version   # 应输出 Python 3.12.x 或更高
-git --version
 ```
 
-#### 2. 安装 QQ 桌面版
+#### 2. 安装 NapCat
 
-前往 [im.qq.com](https://im.qq.com) 下载并安装 QQ 桌面版（QQNT 版本）。
+前往 [NapCat-Mac-Installer Releases](https://github.com/NapNeko/NapCat-Mac-Installer/releases) 下载最新版 `.dmg` 安装器，打开并按提示完成安装。
 
-安装完成后**无需登录**，后续通过 NapCat 启动并扫码登录。
-
-QQ 默认安装位置：`/Applications/QQ.app`
-
-#### 3. 安装 NapCat
-
-macOS 使用 NapCat 官方安装器：
-
-```bash
-# 下载 NapCat macOS 安装器
-# 前往 https://github.com/NapNeko/NapCat-Mac-Installer/releases 下载最新版 .dmg 文件
-
-# 打开安装器并按提示完成安装
-# 安装器会自动将 NapCat 部署到以下位置：
-#   ~/Library/Containers/com.tencent.qq/Data/Documents/loadNapCat.js
-```
-
-> **备选方案**：如果安装器不可用，也可使用 Shell 脚本安装：
+> **备选**：也可使用命令行安装：
 > ```bash
 > curl -o napcat.sh https://nclatest.znin.net/NapNeko/NapCat-Installer/main/script/install.sh
 > sudo bash napcat.sh --tui
 > ```
 
-安装完成后可验证：
+验证安装：
 
 ```bash
-ls ~/Library/Containers/com.tencent.qq/Data/Documents/loadNapCat.js
-# 或
-ls ~/Library/Application\ Support/QQ/loadNapCat.js
+ls ~/Library/Containers/com.tencent.qq/Data/Documents/loadNapCat.js 2>/dev/null \
+  || ls ~/Library/Application\ Support/QQ/loadNapCat.js 2>/dev/null \
+  && echo "NapCat 已安装" || echo "未找到 NapCat"
 ```
 
-如果文件存在，说明 NapCat 安装成功。
-
-#### 4. 部署项目
+#### 3. 部署项目
 
 ```bash
-# 克隆仓库
 cd ~/Desktop
 git clone https://github.com/kent234535/QQ_bot.git
 cd ~/Desktop/QQ_bot
 
-# 创建并激活虚拟环境
 python3 -m venv venv
 source venv/bin/activate
-
-# 安装 Python 依赖
 pip install -r requirements.txt
 ```
 
-#### 5. 启动
+#### 4. 启动
 
 ```bash
 cd ~/Desktop/QQ_bot
@@ -126,86 +94,58 @@ source venv/bin/activate
 python bot.py
 ```
 
-看到以下输出即启动成功：
-
-```
-[QQ Bot] 启动中，监听 127.0.0.1:8080 ...
-```
-
-打开浏览器访问 **http://127.0.0.1:8080/web/** 进入控制台。
+打开浏览器访问 **http://127.0.0.1:8080/web/** ，在控制台中配置 AI 模型、选择角色、点击连接扫码登录即可。
 
 ---
 
-### Windows
+### Windows 部署
 
 #### 1. 安装 Git
 
-1. 前往 https://git-scm.com/download/win 下载安装包
-2. 运行安装程序，全部默认选项，点 **Next** 直到完成
-3. 安装后在开始菜单搜索 **Git Bash** 并打开
+前往 https://git-scm.com/download/win 下载安装，全部默认选项。安装后在开始菜单搜索 **Git Bash** 打开。
 
 > 后续所有命令均在 **Git Bash** 中执行。
 
 #### 2. 安装 Python
 
-1. 前往 https://www.python.org/downloads/ 下载最新版
-2. 运行安装程序，**务必勾选底部 "Add Python to PATH"**，然后点 **Install Now**
-3. 在 Git Bash 中验证：
-
 ```bash
+# 在 Git Bash 中用 winget 安装（Windows 10 1709+ 自带）
+winget install Python.Python.3.12
+
+# 安装后重新打开 Git Bash，验证
 python --version   # 应输出 Python 3.12.x 或更高
 ```
 
-> **注意**：Windows 使用 `python` 命令，macOS 使用 `python3`。下文 Windows 章节统一使用 `python`。
+> 如果 `winget` 不可用，前往 https://www.python.org/downloads/ 下载安装，**务必勾选 "Add Python to PATH"**。
 
-#### 3. 安装 QQ 桌面版
+#### 3. 安装 NapCat
 
-前往 [im.qq.com](https://im.qq.com) 下载并安装 QQ 桌面版（QQNT 版本）。
-
-安装完成后**无需登录**。
-
-QQ 默认安装位置：`C:\Program Files\Tencent\QQNT`
-
-#### 4. 安装 NapCat
-
-在 **PowerShell**（以管理员身份运行）中执行：
+在 **PowerShell（管理员）** 中执行：
 
 ```powershell
-# Windows 11
 curl -o install.ps1 https://nclatest.znin.net/NapNeko/NapCat-Installer/main/script/install.ps1
 powershell -ExecutionPolicy ByPass -File ./install.ps1 -verb runas
 ```
 
-> **Windows 10** 用户如果上述命令失败，请前往 [NapCat-Installer Releases](https://github.com/NapNeko/NapCat-Installer/releases) 手动下载安装。
+> Windows 10 如果失败，前往 [NapCat-Installer Releases](https://github.com/NapNeko/NapCat-Installer/releases) 手动下载。
 
-安装完成后，NapCat loader 通常位于以下位置之一：
+#### 4. 部署项目
 
-```
-%USERPROFILE%\Documents\loadNapCat.js
-%LOCALAPPDATA%\NapCat\loadNapCat.js
-```
-
-#### 5. 部署项目
-
-回到 **Git Bash** 中执行：
+回到 **Git Bash**：
 
 ```bash
-# 克隆仓库
 cd ~/Desktop
 git clone https://github.com/kent234535/QQ_bot.git
 cd ~/Desktop/QQ_bot
 
-# 创建并激活虚拟环境
 python -m venv venv
 source venv/Scripts/activate
-
-# 安装 Python 依赖
 python -m pip install -r requirements.txt
 ```
 
-#### 6. 启动
+#### 5. 启动
 
-**方式一：命令行启动**
+**命令行**：
 
 ```bash
 cd ~/Desktop/QQ_bot
@@ -213,19 +153,11 @@ source venv/Scripts/activate
 python bot.py
 ```
 
-**方式二：双击启动**
+**或双击** 项目根目录下的 `run.bat`。
 
-直接双击项目根目录下的 `run.bat`。
+打开浏览器访问 **http://127.0.0.1:8080/web/** ，在控制台中配置 AI 模型、选择角色、点击连接扫码登录即可。
 
-看到以下输出即启动成功：
-
-```
-[QQ Bot] 启动中，监听 127.0.0.1:8080 ...
-```
-
-打开浏览器访问 **http://127.0.0.1:8080/web/** 进入控制台。
-
-> **注意**：如果连接 QQ 时提示权限错误，请以管理员身份运行 Git Bash 或 `run.bat`。
+> 如果连接时提示权限错误，请以管理员身份运行。
 
 ---
 
@@ -235,11 +167,7 @@ python bot.py
 
 ### 模型配置
 
-1. 点击 **+ 添加模型**
-2. 填写名称、类型、Base URL、API Key、模型名称
-3. 点击 **保存**，然后在卡片上点击 **启用**
-
-常见 AI 平台配置参考：
+添加你自己的 AI API Key，支持以下平台：
 
 | 平台 | 类型 | Base URL | 模型示例 |
 |------|------|----------|----------|
@@ -248,20 +176,15 @@ python bot.py
 | OpenRouter | OpenAI 兼容 | `https://openrouter.ai/api/v1` | `meta-llama/llama-3-70b` |
 | Anthropic | Claude | `https://api.anthropic.com` | `claude-sonnet-4-20250514` |
 
-> API Key 需要到对应平台官网注册并申请，大部分平台提供免费额度。
+> API Key 需到对应平台官网注册申请，大部分平台提供免费额度。
 
 ### 角色管理
 
-- 内置三个角色：猫娘、智能助手、程序员
-- 点击 **启用** 切换当前角色
-- 支持 **+ 添加角色** 创建自定义角色
+内置猫娘、智能助手、程序员三个角色。支持自定义角色，编写你自己的 System Prompt 来定义 AI 的性格和行为。
 
 ### 连接管理
 
-1. 如果检测到多个 QQ 应用，选择要使用的那个
-2. 点击 **连接**，等待 QQ 启动
-3. 出现二维码后，用手机 QQ 扫码登录
-4. 状态变为 **已连接** 即可
+检测到多个 QQ 应用时可切换。点击连接后扫码登录，随时可断开并切换到其他 QQ 号。
 
 ### 参数设置
 
@@ -276,33 +199,23 @@ python bot.py
 
 ---
 
-## 使用方式
+## 日常使用
 
-配置完成后，用**另一个 QQ 号**给机器人 QQ 发私聊消息，即可收到 AI 回复。
+配置完成后，用**另一个 QQ 号**给机器人 QQ 发私聊消息即可收到 AI 回复。
 
-日常使用只需启动程序并在控制台点击连接：
-
-**macOS：**
-
-```bash
-cd ~/Desktop/QQ_bot
-source venv/bin/activate
-python bot.py
-```
-
-**Windows：**
-
-双击 `run.bat`，或：
-
-```bash
-cd ~/Desktop/QQ_bot
-source venv/Scripts/activate
-python bot.py
-```
-
-按 `Ctrl + C` 停止程序。
+每次使用只需启动程序并在控制台点击连接。按 `Ctrl + C` 停止。
 
 ---
+
+## 技术栈
+
+| 层 | 技术 |
+|---|------|
+| 后端框架 | NoneBot2 + FastAPI |
+| 协议适配 | OneBot V11（NapCat 反向 WebSocket） |
+| AI 接入 | OpenAI 兼容 API / Anthropic Claude API |
+| 前端 | Vue 3 + TypeScript + Vite |
+| 数据持久化 | JSON 文件（Pydantic 模型校验） |
 
 ## 项目结构
 
@@ -326,26 +239,15 @@ QQ_bot/
 ├── web/                        # Web 控制台后端
 │   ├── __init__.py             #   挂载 API + 静态文件到 FastAPI
 │   ├── api/                    #   REST API 路由
-│   │   ├── settings.py         #     设置 CRUD
-│   │   ├── providers.py        #     模型 CRUD
-│   │   ├── personas.py         #     角色 CRUD
-│   │   └── napcat.py           #     NapCat 连接管理
 │   └── frontend/dist/          #   Vue 3 前端构建产物
 ├── frontend/                   # Vue 3 前端源码
-│   ├── src/views/              #   页面组件
-│   └── src/api/client.ts       #   API 客户端
 └── data/                       # 运行时数据（自动生成，不纳入版本控制）
-    ├── settings.json
-    ├── providers.json
-    └── personas.json
 ```
 
 ## 前端开发
 
-如果需要修改前端界面：
-
 ```bash
-cd ~/Desktop/QQ_bot/frontend
+cd frontend
 npm install
 npm run dev      # 开发模式，API 代理到 :8080
 npm run build    # 构建到 web/frontend/dist/
@@ -354,8 +256,6 @@ npm run build    # 构建到 web/frontend/dist/
 ---
 
 ## 致谢
-
-本项目的实现离不开以下开源项目：
 
 - **[NoneBot2](https://github.com/nonebot/nonebot2)** — 跨平台 Python 异步机器人框架
 - **[NapCatQQ](https://github.com/NapNeko/NapCatQQ)** — 现代化的基于 NTQQ 的 Bot 协议端实现
@@ -378,13 +278,13 @@ npm run build    # 构建到 web/frontend/dist/
 
 ## 许可证
 
-本项目采用 [Limited Redistribution License](./LICENSE) 许可证。
+本项目采用 [Limited Redistribution License](./LICENSE)。
 
-- 未经许可，禁止用于商业用途
-- 允许在保留许可证全文和版权信息的前提下进行再分发
-- 允许进行小规模修改用于再分发，但修改后的代码不得公开发布
+- 禁止商业用途
+- 允许在保留许可证和版权信息的前提下再分发
+- 修改后的代码不得公开发布
 
-详见 [LICENSE](./LICENSE) 文件。
+详见 [LICENSE](./LICENSE)。
 
 ## 免责声明
 
