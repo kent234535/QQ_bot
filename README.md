@@ -1,7 +1,13 @@
 <p align="center">
   <h1 align="center">QQ Bot</h1>
-  <p align="center">自带控制台的 QQ AI 自动回复机器人</p>
-  <p align="center">自己的 API Key · 自己的角色人设 · 扫码即用 · 跨平台</p>
+  <p align="center"><strong>QQ AI Chatbot with Web Console</strong></p>
+  <p align="center">自带控制台的 QQ AI 自动回复机器人 — 扫码即用 · 自定义角色 · 跨平台</p>
+  <p align="center">
+    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10+-3776ab?logo=python&logoColor=white" alt="Python"></a>
+    <a href="https://nonebot.dev/"><img src="https://img.shields.io/badge/NoneBot2-Framework-ea5252?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiByeD0iMyIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="NoneBot2"></a>
+    <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/Vue_3-Frontend-4fc08d?logo=vuedotjs&logoColor=white" alt="Vue 3"></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-LRL-blue" alt="License"></a>
+  </p>
   <p align="center">
     <a href="#功能特性">功能</a> ·
     <a href="#快速开始">快速开始</a> ·
@@ -11,16 +17,18 @@
   </p>
 </p>
 
+> **QQ AI chatbot** powered by DeepSeek, Claude, Qwen, or any OpenAI-compatible LLM. Features a built-in **web console** for configuration, **custom AI personas**, and **QR code login**. Works on **macOS** and **Windows**.
+
 ---
 
-## 功能特性
+## Features / 功能特性
 
-- **自带 Web 控制台** — 浏览器里完成所有配置，不用编辑任何文件
-- **自己配 API Key** — 支持 DeepSeek、阿里云百炼、OpenRouter、Claude 等任意平台，用自己的额度
-- **自定义角色性格** — 内置猫娘 / 助手 / 程序员，也能随手创建自己的角色
-- **扫码换号** — 控制台一键连接，扫码登录，随时切换 QQ 账号
-- **上下文对话** — 自动回复私聊消息，记住最近对话内容
-- **跨平台** — macOS 和 Windows 均可运行
+- **Web Console** / **自带 Web 控制台** — 浏览器里完成所有配置，不用编辑任何文件
+- **Bring Your Own API Key** / **自己配 API Key** — 支持 DeepSeek、阿里云百炼 (Qwen)、OpenRouter、Claude 等任意 OpenAI 兼容平台
+- **Custom AI Personas** / **自定义角色性格** — 内置猫娘 / 助手 / 程序员，也能随手创建自己的角色 (System Prompt)
+- **QR Code Login** / **扫码换号** — 控制台一键连接 NapCat，扫码登录，随时切换 QQ 账号
+- **Context-Aware Chat** / **上下文对话** — 自动回复私聊消息，记住最近对话内容
+- **Cross-Platform** / **跨平台** — macOS 和 Windows 均可运行
 
 ## 快速开始
 
