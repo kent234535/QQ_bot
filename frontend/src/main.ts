@@ -5,10 +5,11 @@ import App from './App.vue'
 const router = createRouter({
   history: createWebHistory('/web/'),
   routes: [
-    { path: '/', name: 'settings', component: () => import('./views/Settings.vue') },
-    { path: '/providers', name: 'providers', component: () => import('./views/Providers.vue') },
+    { path: '/', redirect: '/personas' },
     { path: '/personas', name: 'personas', component: () => import('./views/Personas.vue') },
+    { path: '/providers', name: 'providers', component: () => import('./views/Providers.vue') },
     { path: '/napcat', name: 'napcat', component: () => import('./views/NapCat.vue') },
+    { path: '/settings', name: 'settings', component: () => import('./views/Settings.vue') },
   ],
 })
 
