@@ -26,6 +26,8 @@
 
 > [!NOTE]
 > **Recommended platform: macOS.** The current release is most stable on macOS. Windows support is available but still being improved.
+>
+> Default local console URL: `http://127.0.0.1:18080/web/`
 
 ---
 
@@ -56,6 +58,8 @@
 ## Quick Start
 
 > Prerequisites: [QQ Desktop (QQNT)](https://im.qq.com) and [NapCat](https://github.com/NapNeko/NapCatQQ) must be installed first.
+>
+> If QQ or NapCat is installed in a non-standard location, you can set `QQ_APP_DIR`, `QQ_EXE`, `QQ_PACKAGE_JSON`, `NAPCAT_LOADER`, or `NAPCAT_WEBUI_CONFIG` in `.env`.
 
 **Choose your operating system:**
 
@@ -109,23 +113,23 @@ ls ~/Library/Containers/com.tencent.qq/Data/Documents/loadNapCat.js 2>/dev/null 
 
 ```bash
 cd ~/Desktop
-git clone https://github.com/kent234535/QQ_bot.git
-cd ~/Desktop/QQ_bot
+git clone https://github.com/kent234535/qq-ai-auto-reply.git
+cd ~/Desktop/qq-ai-auto-reply
 
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 #### 4. Run
 
 ```bash
-cd ~/Desktop/QQ_bot
+cd ~/Desktop/qq-ai-auto-reply
 source venv/bin/activate
-python bot.py
+python3 bot.py
 ```
 
-Open **http://127.0.0.1:8080/web/** in your browser. Configure an AI model, pick a persona, click Connect and scan the QR code to log in.
+Open **http://127.0.0.1:18080/web/** in your browser. Configure an AI model, pick a persona, click Connect and scan the QR code to log in.
 
 ---
 
@@ -166,8 +170,8 @@ Back in **Git Bash**:
 
 ```bash
 cd ~/Desktop
-git clone https://github.com/kent234535/QQ_bot.git
-cd ~/Desktop/QQ_bot
+git clone https://github.com/kent234535/qq-ai-auto-reply.git
+cd ~/Desktop/qq-ai-auto-reply
 
 python -m venv venv
 source venv/Scripts/activate
@@ -179,14 +183,14 @@ python -m pip install -r requirements.txt
 **Command line**:
 
 ```bash
-cd ~/Desktop/QQ_bot
+cd ~/Desktop/qq-ai-auto-reply
 source venv/Scripts/activate
 python bot.py
 ```
 
 **Or double-click** `run.bat` in the project root.
 
-Open **http://127.0.0.1:8080/web/** in your browser. Configure an AI model, pick a persona, click Connect and scan the QR code to log in.
+Open **http://127.0.0.1:18080/web/** in your browser. Configure an AI model, pick a persona, click Connect and scan the QR code to log in.
 
 > If you see permission errors when connecting, run as Administrator.
 
@@ -194,7 +198,7 @@ Open **http://127.0.0.1:8080/web/** in your browser. Configure an AI model, pick
 
 ## Web Console
 
-Visit `http://127.0.0.1:8080/web/` after startup. The sidebar has four pages:
+Visit `http://127.0.0.1:18080/web/` after startup. The sidebar has four pages:
 
 ### Model Configuration
 
@@ -253,7 +257,7 @@ Each session: just start the program and click Connect in the console. Press `Ct
 ## Project Structure
 
 ```
-QQ_bot/
+qq-ai-auto-reply/
 ├── bot.py                      # NoneBot2 entry point
 ├── .env                        # Framework config (HOST / PORT / log level)
 ├── requirements.txt            # Python dependencies
@@ -282,7 +286,7 @@ QQ_bot/
 ```bash
 cd frontend
 npm install
-npm run dev      # Dev mode, API proxied to :8080
+npm run dev      # Dev mode, API proxied to :18080
 npm run build    # Build to web/frontend/dist/
 ```
 
@@ -292,7 +296,7 @@ npm run build    # Build to web/frontend/dist/
 
 To avoid credential leaks:
 
-1. **Never commit `.env` or `data/`** — API keys are stored in `data/providers.json`.
+1. **Never store real secrets in tracked `.env` or `data/`** — the repo `.env` should only keep local HOST / PORT defaults, while API keys live in `data/providers.json`.
 2. **API is local-only by default** — Remote access to `/api/*` is rejected unless explicitly enabled.
 3. **For remote access** — Set `ALLOW_REMOTE_WEB=1` and configure authentication in your reverse proxy (Basic Auth / OAuth / IP whitelist).
 4. **Pre-publish check** — Run `git status --short` to ensure no `data/*.json`, `.env`, or key files are staged.

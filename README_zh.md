@@ -24,6 +24,8 @@
 
 > [!NOTE]
 > **推荐在 macOS 上运行。** 当前版本在 macOS 上运行最稳定，Windows 支持可用但仍在持续优化中。
+>
+> 默认本地控制台地址：`http://127.0.0.1:18080/web/`
 
 ---
 
@@ -54,6 +56,8 @@
 ## 快速开始
 
 > 请先确保已安装 [QQ 桌面版（QQNT）](https://im.qq.com) 和 [NapCat](https://github.com/NapNeko/NapCatQQ)。
+>
+> 如果 QQ 或 NapCat 安装在非标准路径，可在 `.env` 中设置 `QQ_APP_DIR`、`QQ_EXE`、`QQ_PACKAGE_JSON`、`NAPCAT_LOADER`、`NAPCAT_WEBUI_CONFIG` 作为覆盖项。
 
 **选择你的操作系统：**
 
@@ -107,23 +111,23 @@ ls ~/Library/Containers/com.tencent.qq/Data/Documents/loadNapCat.js 2>/dev/null 
 
 ```bash
 cd ~/Desktop
-git clone https://github.com/kent234535/QQ_bot.git
-cd ~/Desktop/QQ_bot
+git clone https://github.com/kent234535/qq-ai-auto-reply.git
+cd ~/Desktop/qq-ai-auto-reply
 
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 #### 4. 启动
 
 ```bash
-cd ~/Desktop/QQ_bot
+cd ~/Desktop/qq-ai-auto-reply
 source venv/bin/activate
-python bot.py
+python3 bot.py
 ```
 
-打开浏览器访问 **http://127.0.0.1:8080/web/** ，在控制台中配置 AI 模型、选择角色、点击连接扫码登录即可。
+打开浏览器访问 **http://127.0.0.1:18080/web/** ，在控制台中配置 AI 模型、选择角色、点击连接扫码登录即可。
 
 ---
 
@@ -164,8 +168,8 @@ powershell -ExecutionPolicy ByPass -File ./install.ps1 -verb runas
 
 ```bash
 cd ~/Desktop
-git clone https://github.com/kent234535/QQ_bot.git
-cd ~/Desktop/QQ_bot
+git clone https://github.com/kent234535/qq-ai-auto-reply.git
+cd ~/Desktop/qq-ai-auto-reply
 
 python -m venv venv
 source venv/Scripts/activate
@@ -177,14 +181,14 @@ python -m pip install -r requirements.txt
 **命令行**：
 
 ```bash
-cd ~/Desktop/QQ_bot
+cd ~/Desktop/qq-ai-auto-reply
 source venv/Scripts/activate
 python bot.py
 ```
 
 **或双击** 项目根目录下的 `run.bat`。
 
-打开浏览器访问 **http://127.0.0.1:8080/web/** ，在控制台中配置 AI 模型、选择角色、点击连接扫码登录即可。
+打开浏览器访问 **http://127.0.0.1:18080/web/** ，在控制台中配置 AI 模型、选择角色、点击连接扫码登录即可。
 
 > 如果连接时提示权限错误，请以管理员身份运行。
 
@@ -192,7 +196,7 @@ python bot.py
 
 ## Web 控制台
 
-启动后访问 `http://127.0.0.1:8080/web/`，左侧菜单包含四个页面：
+启动后访问 `http://127.0.0.1:18080/web/`，左侧菜单包含四个页面：
 
 ### 模型配置
 
@@ -251,7 +255,7 @@ python bot.py
 ## 项目结构
 
 ```
-QQ_bot/
+qq-ai-auto-reply/
 ├── bot.py                      # NoneBot2 入口
 ├── .env                        # 框架配置（HOST / PORT / 日志级别）
 ├── requirements.txt            # Python 依赖
@@ -280,7 +284,7 @@ QQ_bot/
 ```bash
 cd frontend
 npm install
-npm run dev      # 开发模式，API 代理到 :8080
+npm run dev      # 开发模式，API 代理到 :18080
 npm run build    # 构建到 web/frontend/dist/
 ```
 
@@ -290,7 +294,7 @@ npm run build    # 构建到 web/frontend/dist/
 
 为避免泄露风险，建议按以下规则使用：
 
-1. **不要提交 `.env` 和 `data/`**：API Key 会保存在 `data/providers.json`，属于敏感信息。
+1. **不要在已跟踪的 `.env` 或 `data/` 中存放真实密钥**：仓库中的 `.env` 只应保存本机 HOST / PORT 默认值，API Key 请保存在 `data/providers.json`。
 2. **默认仅本机可访问 API**：项目默认拒绝远程访问 `/api/*`（防止误暴露后被调用）。
 3. **如需远程访问**：在环境变量设置 `ALLOW_REMOTE_WEB=1`，并务必在反向代理层加鉴权（如 Basic Auth / OAuth / IP 白名单）。
 4. **公开前自检**：执行 `git status --short`，确认没有 `data/*.json`、`.env`、私钥文件等待提交。

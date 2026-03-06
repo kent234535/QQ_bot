@@ -19,14 +19,47 @@ import httpx
 
 router = APIRouter()
 
+_DEFAULT_NONEBOT_HOST = "127.0.0.1"
+_DEFAULT_NONEBOT_PORT = "18080"
+
+
+def _env_path(name: str) -> Path | None:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        return None
+    return Path(os.path.expandvars(os.path.expanduser(value)))
+
+
+def _existing_env_path(name: str) -> Path | None:
+    path = _env_path(name)
+    if path and path.exists():
+        return path
+    return None
+
+
+def _manual_package_json() -> Path | None:
+    path = _existing_env_path("QQ_PACKAGE_JSON")
+    if path and path.is_file():
+        return path
+    return None
+
+
+def _manual_app_dir_from_exe(path: Path) -> Path:
+    if _IS_MAC:
+        parts = path.parts
+        for idx, part in enumerate(parts):
+            if part.endswith(".app"):
+                return Path(*parts[:idx + 1])
+    return path.parent
+
 
 def _get_nonebot_ws() -> str:
     """从环境变量 / .env 读取 HOST 和 PORT，动态拼接 NoneBot2 WS 地址"""
-    host = os.environ.get("HOST", "127.0.0.1") or "127.0.0.1"
-    port = os.environ.get("PORT", "8080") or "8080"
+    host = os.environ.get("HOST", _DEFAULT_NONEBOT_HOST) or _DEFAULT_NONEBOT_HOST
+    port = os.environ.get("PORT", _DEFAULT_NONEBOT_PORT) or _DEFAULT_NONEBOT_PORT
     # 0.0.0.0 / :: 监听全接口时，NapCat 仍连 localhost
     if host in ("0.0.0.0", "::", "::0"):
-        host = "127.0.0.1"
+        host = _DEFAULT_NONEBOT_HOST
     return f"ws://{host}:{port}/onebot/v11/ws"
 
 # ─── 平台检测 ───
@@ -60,6 +93,9 @@ else:
 
 def _find_napcat_loader() -> Path | None:
     """查找 NapCat loader 脚本"""
+    override = _existing_env_path("NAPCAT_LOADER")
+    if override and override.is_file():
+        return override
     for p in _NAPCAT_LOADER_CANDIDATES:
         if p.exists():
             return p
@@ -80,12 +116,21 @@ def _app_pkg(app_dir: str) -> Path:
     ~/Library/Application Support/QQ/versions/<ver>/QQUpdate.app/ 下，
     需要修改那里的 package.json 才能让 NapCat 生效。"""
     if _IS_MAC:
+        manual = _manual_package_json()
+        if manual:
+            return manual
         hot = _find_hot_update_pkg()
         if hot:
             return hot
         return Path(f"{app_dir}/Contents/Resources/app/package.json")
     elif _IS_WIN:
+        manual = _manual_package_json()
+        if manual:
+            return manual
         return Path(f"{app_dir}\\resources\\app\\package.json")
+    manual = _manual_package_json()
+    if manual:
+        return manual
     return Path(f"{app_dir}/resources/app/package.json")
 
 
@@ -162,6 +207,31 @@ def _detect_qq_from_registry() -> list[str]:
 def _detect_all_qq_apps() -> list[dict]:
     """扫描本机所有 QQ 应用，返回列表。"""
     apps: list[dict] = []
+
+    def add_app(app_dir: str, name: str | None = None) -> None:
+        app_dir = os.path.normpath(app_dir)
+        pkg = _app_pkg(app_dir)
+        exe = _app_exe(app_dir)
+        if not pkg.exists():
+            return
+        if any(a["exe"] == exe for a in apps):
+            return
+        apps.append({
+            "app_dir": app_dir,
+            "exe": exe,
+            "package_json": str(pkg),
+            "name": name or Path(app_dir).name,
+        })
+
+    manual_dir = _existing_env_path("QQ_APP_DIR")
+    if manual_dir and manual_dir.is_dir():
+        add_app(str(manual_dir), manual_dir.name)
+
+    manual_exe = _existing_env_path("QQ_EXE")
+    if manual_exe and manual_exe.is_file():
+        manual_app_dir = _manual_app_dir_from_exe(manual_exe)
+        add_app(str(manual_app_dir), manual_app_dir.name)
+
     if _IS_MAC:
         # 扫描系统级和用户级应用目录
         _mac_dirs = ["/Applications", str(Path.home() / "Applications")]
@@ -170,14 +240,7 @@ def _detect_all_qq_apps() -> list[dict]:
                 name = Path(app_path).name
                 if "Browser" in name:
                     continue
-                pkg = _app_pkg(app_path)
-                if pkg.exists():
-                    apps.append({
-                        "app_dir": app_path,
-                        "exe": _app_exe(app_path),
-                        "package_json": str(pkg),
-                        "name": name,
-                    })
+                add_app(app_path, name)
     elif _IS_WIN:
         _WIN_QQ_DIRS = [
             r"C:\Program Files\Tencent\QQNT",
@@ -195,24 +258,10 @@ def _detect_all_qq_apps() -> list[dict]:
             if d in seen:
                 continue
             seen.add(d)
-            pkg = _app_pkg(d)
-            if pkg.exists():
-                apps.append({
-                    "app_dir": d,
-                    "exe": _app_exe(d),
-                    "package_json": str(pkg),
-                    "name": Path(d).name,
-                })
+            add_app(d, Path(d).name)
     else:
         for d in ["/opt/QQ"]:
-            pkg = _app_pkg(d)
-            if pkg.exists():
-                apps.append({
-                    "app_dir": d,
-                    "exe": _app_exe(d),
-                    "package_json": str(pkg),
-                    "name": Path(d).name,
-                })
+            add_app(d, Path(d).name)
     return apps
 
 
@@ -578,6 +627,12 @@ def _parse_bool(value: object) -> bool:
 # ─── WebUI 工具函数 ───
 
 def _load_webui_config() -> dict:
+    override = _existing_env_path("NAPCAT_WEBUI_CONFIG")
+    if override and override.is_file():
+        try:
+            return json.loads(override.read_text(encoding="utf-8"))
+        except Exception:
+            pass
     for p in _WEBUI_CONFIG_CANDIDATES:
         try:
             if p.exists():
