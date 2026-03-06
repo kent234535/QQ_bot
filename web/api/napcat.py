@@ -75,11 +75,39 @@ def _app_exe(app_dir: str) -> str:
 
 
 def _app_pkg(app_dir: str) -> Path:
+    """返回 QQ 实际生效的 package.json 路径。
+    QQ 有热更新机制，热更新后真正加载的代码在
+    ~/Library/Application Support/QQ/versions/<ver>/QQUpdate.app/ 下，
+    需要修改那里的 package.json 才能让 NapCat 生效。"""
     if _IS_MAC:
+        hot = _find_hot_update_pkg()
+        if hot:
+            return hot
         return Path(f"{app_dir}/Contents/Resources/app/package.json")
     elif _IS_WIN:
         return Path(f"{app_dir}\\resources\\app\\package.json")
     return Path(f"{app_dir}/resources/app/package.json")
+
+
+def _find_hot_update_pkg() -> Path | None:
+    """macOS: 查找 QQ 热更新版本的 package.json"""
+    if not _IS_MAC:
+        return None
+    versions_dir = Path.home() / "Library/Application Support/QQ/versions"
+    config_file = versions_dir / "config.json"
+    if not config_file.exists():
+        return None
+    try:
+        config = json.loads(config_file.read_text(encoding="utf-8"))
+        cur_version = config.get("curVersion", "")
+        if not cur_version:
+            return None
+        hot_pkg = versions_dir / cur_version / "QQUpdate.app/Contents/Resources/app/package.json"
+        if hot_pkg.exists():
+            return hot_pkg
+    except Exception:
+        pass
+    return None
 
 
 def _check_napcat_mode(package_json: Path) -> bool:
@@ -266,6 +294,59 @@ else:
     ]
 
 
+async def _enable_onebot11_ws_via_api() -> bool:
+    """通过 NapCat WebUI API 动态配置 OneBot11 WebSocket 连接。
+    NapCat 启动后不会重新读取配置文件，必须通过 API 设置才能立即生效。"""
+    config = _load_webui_config()
+    base_url = _get_webui_base(config)
+    token = str(config.get("token", "") or "")
+    if not token:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            credential, err = await _get_credential(client, base_url, token)
+            if not credential:
+                return False
+
+            # 先获取当前配置
+            get_resp = await _napcat_api(client, base_url, "/api/OB11Config/GetConfig", credential)
+            if get_resp.get("code") != 0:
+                return False
+            cfg = get_resp.get("data") or {}
+
+            # 确保 WebSocket 客户端配置存在
+            network = cfg.get("network", {})
+            ws_clients = network.get("websocketClients", [])
+            nonebot_ws = _get_nonebot_ws()
+            has_nonebot = any(
+                c.get("url") == nonebot_ws and c.get("enable")
+                for c in ws_clients
+            )
+            if not has_nonebot:
+                ws_clients.append({
+                    "enable": True,
+                    "url": nonebot_ws,
+                    "reconnectIntervalMs": 5000,
+                    "heartIntervalMs": 30000,
+                    "accessToken": "",
+                })
+                network["websocketClients"] = ws_clients
+                cfg["network"] = network
+
+            # SetConfig 要求 {"config": "<JSON字符串>"}
+            resp = await client.post(
+                f"{base_url}/api/OB11Config/SetConfig",
+                json={"config": json.dumps(cfg)},
+                headers={"Authorization": f"Bearer {credential}"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get("code") == 0
+    except Exception:
+        pass
+    return False
+
+
 def _enable_onebot11_ws() -> str:
     """为所有 onebot11 配置写入 WebSocket 客户端，指向 NoneBot2。
     返回修复信息（空字符串表示无需修复）。"""
@@ -360,8 +441,36 @@ def _calc_napcat_main(package_json: Path, loader: Path) -> str:
         return "/".join([".."] * ups + list(remainder))
 
 
-def _enable_napcat(pkg_path: Path) -> tuple[bool, str]:
-    """将目标 QQ 的 package.json 切换到 NapCat 模式，返回 (成功, 消息)"""
+def _patch_loader_for_app(loader: Path, app_dir: str) -> Path | None:
+    """如果 loadNapCat.js 中硬编码了其他 QQ.app 路径，生成修正副本。
+    返回修正后的 loader 路径；不需要修正则返回 None。"""
+    if not _IS_MAC:
+        return None
+    try:
+        content = loader.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    default_app = "/Applications/QQ.app"
+    target_app = app_dir.rstrip("/")
+    if target_app == default_app:
+        return None
+    if default_app not in content:
+        return None
+    patched_content = content.replace(default_app, target_app)
+    data_dir = Path(__file__).resolve().parent.parent.parent / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    app_name = Path(target_app).stem
+    patched_path = data_dir / f"loadNapCat_{app_name}.js"
+    try:
+        patched_path.write_text(patched_content, encoding="utf-8")
+        return patched_path
+    except Exception:
+        return None
+
+
+def _enable_napcat(pkg_path: Path, qq_app_dir: str = "") -> tuple[bool, str]:
+    """将目标 QQ 的 package.json 切换到 NapCat 模式，返回 (成功, 消息)。
+    qq_app_dir: 实际 QQ app 路径（如 /Applications/QQ.app），用于 loader 路径修正。"""
     loader = _find_napcat_loader()
     if not loader:
         return False, "未找到 NapCat loader 脚本（loadNapCat.js），请先安装 NapCat"
@@ -371,8 +480,24 @@ def _enable_napcat(pkg_path: Path) -> tuple[bool, str]:
     except Exception as e:
         return False, f"读取 package.json 失败: {e}"
 
+    # 为非默认 QQ 副本生成修正后的 loader
+    actual_loader = loader
+    if qq_app_dir:
+        patched = _patch_loader_for_app(loader, qq_app_dir)
+        if patched:
+            actual_loader = patched
+
     current_main = data.get("main", "")
+    napcat_main = _calc_napcat_main(pkg_path, actual_loader)
+
     if "napcat" in current_main.lower():
+        # 已处于 NapCat 模式，但要确保 loader 指向正确
+        if current_main != napcat_main:
+            data["main"] = napcat_main
+            try:
+                pkg_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
         return True, "已处于 NapCat 模式"
 
     # 保存原始 main
@@ -380,7 +505,6 @@ def _enable_napcat(pkg_path: Path) -> tuple[bool, str]:
     _save_original_main()
 
     # 替换 main
-    napcat_main = _calc_napcat_main(pkg_path, loader)
     data["main"] = napcat_main
     try:
         pkg_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -389,11 +513,6 @@ def _enable_napcat(pkg_path: Path) -> tuple[bool, str]:
         return False, f"没有权限修改 {pkg_path}，{hint}"
     except Exception as e:
         return False, f"写入 package.json 失败: {e}"
-
-    # macOS 需要重新签名
-    if _IS_MAC:
-        app_dir = str(pkg_path).split("/Contents/")[0]
-        _codesign(app_dir)
 
     return True, "已切换到 NapCat 模式"
 
@@ -414,18 +533,17 @@ def _disable_napcat(pkg_path: Path) -> tuple[bool, str]:
         return True, "已处于正常模式"
 
     if not original:
-        # 没有备份，使用默认值
-        original = "./app_launcher/index.js"
+        # 没有备份，根据路径判断默认值
+        if "QQUpdate.app" in str(pkg_path):
+            original = "./application.asar/app_launcher/index.js"
+        else:
+            original = "./app_launcher/index.js"
 
     data["main"] = original
     try:
         pkg_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
         return False, f"恢复 package.json 失败: {e}"
-
-    if _IS_MAC:
-        app_dir = str(pkg_path).split("/Contents/")[0]
-        _codesign(app_dir)
 
     return True, "已恢复正常模式"
 
@@ -694,7 +812,7 @@ async def napcat_status():
 
     # QQ 登录后自动确保 OneBot11 配置正确
     if qq_login:
-        _enable_onebot11_ws()
+        await _enable_onebot11_ws_via_api()
 
     return {
         "connected": connected,
@@ -774,7 +892,14 @@ async def connect_napcat():
     if not pkg:
         return {"ok": False, "message": f"未找到 package.json: {_active_exe}"}
 
-    ok, msg = _enable_napcat(pkg)
+    # 获取实际 QQ app 目录（用于 loader 路径修正）
+    qq_app_dir = ""
+    for a in _detect_all_qq_apps():
+        if a["exe"] == _active_exe:
+            qq_app_dir = a["app_dir"]
+            break
+
+    ok, msg = _enable_napcat(pkg, qq_app_dir)
     if not ok:
         return {"ok": False, "message": msg}
 
@@ -804,8 +929,8 @@ async def connect_napcat():
         await asyncio.sleep(2)
         cur_base = _get_webui_base()
         if await _check_webui_reachable(cur_base):
-            # 确保 OneBot11 配置正确（自动为所有账号配置消息转发）
-            _enable_onebot11_ws()
+            # 通过 API 动态配置 OneBot11 WebSocket 连接
+            await _enable_onebot11_ws_via_api()
             return await _fetch_qrcode_result()
 
     if _is_qq_running():

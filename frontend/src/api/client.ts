@@ -13,13 +13,7 @@ export const updateSettings = (data: Record<string, unknown>) => api.put('/setti
 export const listProviders = () => api.get('/providers')
 export const createProvider = (data: Record<string, unknown>) => api.post('/providers', data)
 export const updateProvider = (id: string, data: Record<string, unknown>) => api.put(`/providers/${id}`, data)
-export const updateProviderModelKey = (id: string, data: Record<string, unknown>) =>
-  api.patch(`/providers/${id}/model-key`, data)
 export const deleteProvider = (id: string) => api.delete(`/providers/${id}`)
-export const listAvailableModels = (data: Record<string, unknown>) =>
-  api.post('/providers/list-models', data, { timeout: 20000 })
-export const listProviderModels = (id: string) =>
-  api.get(`/providers/${id}/models`, { timeout: 20000 })
 export const testProviderModel = (id: string, data?: Record<string, unknown>) =>
   api.post(`/providers/${id}/test`, data || null, { timeout: 20000 })
 

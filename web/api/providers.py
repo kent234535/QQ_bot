@@ -72,16 +72,6 @@ class ProviderUpdate(BaseModel):
     enabled: bool = True
 
 
-class ProviderModelKeyUpdate(BaseModel):
-    model: str | None = None
-    api_key: str | None = None
-
-
-class ListModelsRequest(BaseModel):
-    type: str = "openai_compat"
-    base_url: str = ""
-    api_key: str = ""
-
 
 def _slug(text: str, fallback: str = "provider") -> str:
     value = re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
@@ -112,77 +102,6 @@ async def create_provider(body: ProviderCreate):
     config.add_provider(data)
     return {"ok": True, "id": data["id"]}
 
-
-@router.post("/list-models")
-async def list_available_models(body: ListModelsRequest):
-    if not body.base_url or not body.api_key:
-        raise HTTPException(400, "请填写 Base URL 和 API Key")
-    _validate_base_url(body.base_url)
-
-    try:
-        if body.type == "claude":
-            base = body.base_url.rstrip("/") if body.base_url else "https://api.anthropic.com"
-            url = f"{base}/v1/models"
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.get(url, headers={
-                    "x-api-key": body.api_key,
-                    "anthropic-version": "2023-06-01",
-                })
-                resp.raise_for_status()
-                data = resp.json()
-                models = sorted([m["id"] for m in data.get("data", [])])
-        else:
-            url = f"{body.base_url.rstrip('/')}/models"
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.get(url, headers={
-                    "Authorization": f"Bearer {body.api_key}",
-                })
-                resp.raise_for_status()
-                data = resp.json()
-                models = sorted([m["id"] for m in data.get("data", [])])
-        return {"ok": True, "models": models}
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(e.response.status_code, f"API 错误: {e.response.status_code}")
-    except httpx.RequestError as e:
-        raise HTTPException(502, f"连接失败: {e}")
-
-
-
-@router.get("/{provider_id}/models")
-async def list_provider_models(provider_id: str):
-    """Use stored credentials to list available models for an existing provider."""
-    p = config.get_provider(provider_id)
-    if not p:
-        raise HTTPException(404, "模型不存在")
-    if not p.get("base_url") or not p.get("api_key"):
-        raise HTTPException(400, "模型缺少 Base URL 或 API Key")
-
-    try:
-        if p.get("type") == "claude":
-            base = p["base_url"].rstrip("/") if p.get("base_url") else "https://api.anthropic.com"
-            url = f"{base}/v1/models"
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.get(url, headers={
-                    "x-api-key": p["api_key"],
-                    "anthropic-version": "2023-06-01",
-                })
-                resp.raise_for_status()
-                data = resp.json()
-                models = sorted([m["id"] for m in data.get("data", [])])
-        else:
-            url = f"{p['base_url'].rstrip('/')}/models"
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.get(url, headers={
-                    "Authorization": f"Bearer {p['api_key']}",
-                })
-                resp.raise_for_status()
-                data = resp.json()
-                models = sorted([m["id"] for m in data.get("data", [])])
-        return {"ok": True, "models": models}
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(e.response.status_code, f"API 错误: {e.response.status_code}")
-    except httpx.RequestError as e:
-        raise HTTPException(502, f"连接失败: {e}")
 
 
 class TestModelRequest(BaseModel):
@@ -270,25 +189,6 @@ async def update_provider(provider_id: str, body: ProviderUpdate):
         existing = config.get_provider(provider_id)
         if existing:
             data["api_key"] = existing["api_key"]
-    config.add_provider(data)
-    return {"ok": True}
-
-
-@router.patch("/{provider_id}/model-key")
-async def update_provider_model_key(provider_id: str, body: ProviderModelKeyUpdate):
-    existing = config.get_provider(provider_id)
-    if not existing:
-        raise HTTPException(404, "模型不存在")
-
-    data = dict(existing)
-
-    if body.model is not None:
-        data["model"] = body.model
-
-    if body.api_key is not None:
-        if "****" not in body.api_key and body.api_key.strip() != "":
-            data["api_key"] = body.api_key
-
     config.add_provider(data)
     return {"ok": True}
 

@@ -22,6 +22,9 @@ napcat/
 .vscode/
 .idea/
 
+# TypeScript build info
+frontend/tsconfig.tsbuildinfo
+
 # OS
 .DS_Store
 

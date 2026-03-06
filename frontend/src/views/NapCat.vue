@@ -29,7 +29,7 @@ async function doConnect() {
   qrcode.value = null
   try {
     const { data } = await connectNapCat()
-    if (data.qrcode_image_api || data.qrcode_url) {
+    if (data.qrcode_image_api) {
       // 返回了二维码
       qrcode.value = data
       msg.value = data.message || '请使用手机 QQ 扫码登录'

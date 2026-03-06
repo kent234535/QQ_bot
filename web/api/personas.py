@@ -11,10 +11,14 @@ router = APIRouter()
 
 
 class PersonaCreate(BaseModel):
-    id: str
     name: str
     system_prompt: str
     builtin: bool = False
+
+
+class PersonaUpdate(BaseModel):
+    name: str
+    system_prompt: str
 
 
 @router.get("")
@@ -25,9 +29,18 @@ async def list_personas():
 
 @router.post("")
 async def create_persona(body: PersonaCreate):
-    """创建或更新角色"""
-    config.add_persona(body.model_dump())
-    return {"ok": True}
+    """创建角色（自动生成 ID）"""
+    import re
+    from uuid import uuid4
+    slug = re.sub(r"[^a-z0-9]+", "-", body.name.lower()).strip("-")[:20] or "persona"
+    existing_ids = {p.get("id", "") for p in config.personas}
+    pid = f"{slug}-{uuid4().hex[:6]}"
+    while pid in existing_ids:
+        pid = f"{slug}-{uuid4().hex[:6]}"
+    data = body.model_dump()
+    data["id"] = pid
+    config.add_persona(data)
+    return {"ok": True, "id": pid}
 
 
 @router.get("/{persona_id}")
@@ -40,10 +53,13 @@ async def get_persona(persona_id: str):
 
 
 @router.put("/{persona_id}")
-async def update_persona(persona_id: str, body: PersonaCreate):
+async def update_persona(persona_id: str, body: PersonaUpdate):
     """更新角色"""
-    data = body.model_dump()
-    data["id"] = persona_id
+    existing = config.get_persona(persona_id)
+    if not existing:
+        raise HTTPException(404, "角色不存在")
+    data = dict(existing)
+    data.update(body.model_dump())
     config.add_persona(data)
     return {"ok": True}
 
